@@ -1,2 +1,6 @@
 # GitHub Pages 自动生成
 index.html
+
+# Python 缓存
+__pycache__/
+*.pyc
