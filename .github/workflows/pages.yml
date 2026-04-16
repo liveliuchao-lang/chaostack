@@ -54,12 +54,16 @@ jobs:
           echo "=== Exit code: $? ==="
         working-directory: ${{ github.workspace }}
         
+      - name: Prepare artifact directory
+        run: |
+          mkdir -p public
+          cp index.html public/
+          cp -r reports/ public/
+          
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v3
         with:
-          path: |
-            index.html
-            reports/
+          path: public
           
   deploy:
     needs: build
