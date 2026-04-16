@@ -29,9 +29,29 @@ jobs:
       - name: Setup Pages
         uses: actions/configure-pages@v5
       
+      - name: Debug - List Files
+        run: |
+          echo "=== Debug Info ==="
+          echo "GITHUB_WORKSPACE: $GITHUB_WORKSPACE"
+          echo "PWD: $(pwd)"
+          echo "=== Root directory ==="
+          ls -la
+          echo "=== Scripts directory ==="
+          ls -la scripts/ || echo "scripts/ not found"
+          echo "=== Templates directory ==="
+          ls -la templates/ || echo "templates/ not found"
+          echo "=== Reports directory ==="
+          ls -la reports/ || echo "reports/ not found"
+          echo "=== Python version ==="
+          python3 --version
+          echo "=== Python path ==="
+          which python3
+          echo "=== Running generate_index.py ==="
+      
       - name: Generate Index
         run: |
-          python3 scripts/generate_index.py
+          python3 scripts/generate_index.py 2>&1
+          echo "=== Exit code: $? ==="
         working-directory: ${{ github.workspace }}
         
       - name: Upload artifact

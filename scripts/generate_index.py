@@ -3,13 +3,21 @@
 自动扫描 reports/ 目录，生成索引页 index.html
 """
 import os
+import sys
 import re
 from datetime import datetime
 from pathlib import Path
 
-REPORTS_DIR = "reports"
-OUTPUT_INDEX = "index.html"
-TEMPLATE_FILE = "templates/index_template.html"
+# 获取脚本所在目录的绝对路径
+SCRIPT_DIR = Path(__file__).parent.resolve()
+REPO_DIR = SCRIPT_DIR.parent
+REPORTS_DIR = REPO_DIR / "reports"
+OUTPUT_INDEX = REPO_DIR / "index.html"
+TEMPLATE_FILE = REPO_DIR / "templates" / "index_template.html"
+
+def log(msg):
+    """打印日志到 stderr"""
+    print(msg, file=sys.stderr)
 
 def extract_title(html_path):
     """从 HTML 文件中提取 <title> 标签内容"""
@@ -17,9 +25,10 @@ def extract_title(html_path):
         with open(html_path, 'r', encoding='utf-8') as f:
             content = f.read()
         match = re.search(r'<title>(.*?)</title>', content)
-        return match.group(1) if match else Path(html_path).stem
-    except:
-        return Path(html_path).stem
+        return match.group(1) if match else html_path.stem
+    except Exception as e:
+        log(f"Error reading title from {html_path}: {e}")
+        return html_path.stem
 
 def extract_date_from_filename(filename):
     """从文件名提取日期，如 MiniMax-M2.7_2026-04-15.html"""
@@ -36,22 +45,28 @@ def extract_date_from_filename(filename):
 def scan_reports():
     """扫描 reports/ 目录，获取所有报告信息"""
     reports = []
-    reports_path = Path(REPORTS_DIR)
     
-    if not reports_path.exists():
+    log(f"Scanning reports directory: {REPORTS_DIR}")
+    log(f"Reports dir exists: {REPORTS_DIR.exists()}")
+    
+    if not REPORTS_DIR.exists():
+        log(f"ERROR: Reports directory does not exist: {REPORTS_DIR}")
         return reports
     
-    for html_file in reports_path.glob("*.html"):
+    html_files = list(REPORTS_DIR.glob("*.html"))
+    log(f"Found {len(html_files)} HTML files")
+    
+    for html_file in html_files:
         title = extract_title(html_file)
-        date = extract_date_from_filename(html_file)
+        date = extract_date_from_filename(html_file.name)
         file_path = html_file.name
-        # 按日期排序，最新的在前
         reports.append({
             'title': title,
             'date': date,
             'file': file_path,
             'path': f"reports/{file_path}"
         })
+        log(f"  Report: {file_path} -> {title} ({date})")
     
     # 按日期降序排列
     reports.sort(key=lambda x: x['date'], reverse=True)
@@ -59,6 +74,13 @@ def scan_reports():
 
 def generate_index_html(reports):
     """生成 index.html 内容"""
+    log(f"Template file: {TEMPLATE_FILE}")
+    log(f"Template exists: {TEMPLATE_FILE.exists()}")
+    
+    if not TEMPLATE_FILE.exists():
+        log(f"ERROR: Template file does not exist: {TEMPLATE_FILE}")
+        sys.exit(1)
+    
     with open(TEMPLATE_FILE, 'r', encoding='utf-8') as f:
         template = f.read()
     
@@ -74,6 +96,15 @@ def generate_index_html(reports):
         """
         cards_html += card
     
+    # 如果没有报告，显示空状态
+    if not reports:
+        empty_state = '''
+        <div class="empty-state">
+            <p>暂无报告</p>
+        </div>'''
+        template = template.replace('<div class="empty-state" style="display: none;">', f'<div class="empty-state">')
+        template = template.replace('style="display: none;"', '')
+    
     # 替换模板占位符
     html = template.replace("{{REPORTS_CARDS}}", cards_html)
     html = html.replace("{{REPORT_COUNT}}", str(len(reports)))
@@ -82,8 +113,14 @@ def generate_index_html(reports):
     with open(OUTPUT_INDEX, 'w', encoding='utf-8') as f:
         f.write(html)
     
-    print(f"Generated {OUTPUT_INDEX} with {len(reports)} reports")
+    log(f"Generated {OUTPUT_INDEX} with {len(reports)} reports")
 
 if __name__ == "__main__":
+    log(f"Script directory: {SCRIPT_DIR}")
+    log(f"Repo directory: {REPO_DIR}")
+    log(f"Current working directory: {os.getcwd()}")
+    
     reports = scan_reports()
     generate_index_html(reports)
+    
+    log("Script completed successfully")
