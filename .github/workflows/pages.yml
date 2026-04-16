@@ -29,7 +29,22 @@ jobs:
         uses: actions/configure-pages@v5
       
       - name: Generate Index
-        run: python3 scripts/generate_index.py
+        run: |
+          echo "=== Debug Info ==="
+          echo "Workspace: $GITHUB_WORKSPACE"
+          echo "PWD: $(pwd)"
+          echo "=== Files in repo ==="
+          ls -la
+          echo "=== Reports dir ==="
+          ls -la reports/ || echo "reports dir not found"
+          echo "=== Scripts dir ==="
+          ls -la scripts/ || echo "scripts dir not found"
+          echo "=== Templates dir ==="
+          ls -la templates/ || echo "templates dir not found"
+          echo "=== Python version ==="
+          python3 --version
+          echo "=== Running generate_index.py ==="
+          python3 scripts/generate_index.py
         
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v3
