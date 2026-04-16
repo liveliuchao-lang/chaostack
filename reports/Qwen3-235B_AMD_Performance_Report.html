@@ -1,0 +1,1466 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Qwen3-235B-A22B · AMD GPU 推理性能报告</title>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<style>
+  :root {
+    --amd: #ED1C24;
+    --amd-light: #FF6B71;
+    --amd-dim: rgba(237,28,36,0.15);
+    --bg: #0F1117;
+    --card: #1A1D2E;
+    --card2: #1E2235;
+    --border: #2A2D3E;
+    --text: #E8EAED;
+    --text-muted: #8B8FA8;
+    --accent: #ED1C24;
+    --accent2: #FF6B71;
+    --gold: #FFB84D;
+    --teal: #00D4AA;
+    --blue: #5865F2;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: 'Segoe UI', 'PingFang SC', 'Microsoft YaHei', sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    line-height: 1.6;
+    min-height: 100vh;
+  }
+
+  /* ── Hero ── */
+  .hero {
+    background: linear-gradient(135deg, #0F1117 0%, #1A0608 45%, #0F1117 100%);
+    border-bottom: 1px solid var(--border);
+    padding: 52px 40px 40px;
+    position: relative;
+    overflow: hidden;
+  }
+  .hero::before {
+    content: '';
+    position: absolute;
+    top: -100px; right: -100px;
+    width: 500px; height: 500px;
+    background: radial-gradient(circle, rgba(237,28,36,0.10) 0%, transparent 65%);
+    pointer-events: none;
+  }
+  .hero::after {
+    content: '';
+    position: absolute;
+    bottom: -60px; left: 10%;
+    width: 300px; height: 300px;
+    background: radial-gradient(circle, rgba(237,28,36,0.06) 0%, transparent 70%);
+    pointer-events: none;
+  }
+  .hero-badge {
+    display: inline-flex; align-items: center; gap: 8px;
+    background: rgba(237,28,36,0.12);
+    border: 1px solid rgba(237,28,36,0.35);
+    border-radius: 20px;
+    padding: 4px 14px;
+    font-size: 12px;
+    color: var(--amd-light);
+    margin-bottom: 18px;
+    letter-spacing: 0.5px;
+    font-weight: 600;
+  }
+  .hero h1 {
+    font-size: clamp(22px, 2.8vw, 36px);
+    font-weight: 700;
+    background: linear-gradient(135deg, #fff 0%, #FFAAAE 60%, #ED1C24 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    margin-bottom: 12px;
+    line-height: 1.25;
+  }
+  .hero-sub { color: var(--text-muted); font-size: 14px; margin-bottom: 24px; }
+  .hero-meta { display: flex; gap: 16px; flex-wrap: wrap; }
+  .hero-chip {
+    display: flex; align-items: center; gap: 8px;
+    background: var(--card); border: 1px solid var(--border);
+    border-radius: 8px; padding: 8px 14px; font-size: 13px;
+  }
+  .chip-amd { border-left: 3px solid var(--amd); }
+  .dot { width: 8px; height: 8px; border-radius: 50%; display: inline-block; }
+  .dot-amd { background: var(--amd); }
+  .dot-teal { background: var(--teal); }
+  .dot-gold { background: var(--gold); }
+
+  /* ── Nav ── */
+  .nav {
+    position: sticky; top: 0; z-index: 100;
+    background: rgba(15,17,23,0.95);
+    backdrop-filter: blur(14px);
+    border-bottom: 1px solid var(--border);
+    padding: 0 40px;
+    display: flex; gap: 2px; overflow-x: auto;
+    scrollbar-width: none;
+  }
+  .nav::-webkit-scrollbar { display: none; }
+  .nav-item {
+    padding: 14px 16px;
+    font-size: 13px;
+    color: var(--text-muted);
+    cursor: pointer;
+    border-bottom: 2px solid transparent;
+    transition: all 0.2s;
+    white-space: nowrap;
+    text-decoration: none;
+  }
+  .nav-item:hover, .nav-item.active {
+    color: var(--text);
+    border-color: var(--amd);
+  }
+
+  /* ── Layout ── */
+  main { max-width: 1400px; margin: 0 auto; padding: 36px 40px 100px; }
+  .section { margin-bottom: 60px; scroll-margin-top: 60px; }
+  .section-title {
+    font-size: 19px; font-weight: 600;
+    margin-bottom: 22px;
+    display: flex; align-items: center; gap: 10px;
+  }
+  .section-title::before {
+    content: '';
+    display: block;
+    width: 4px; height: 22px;
+    border-radius: 2px;
+    background: linear-gradient(180deg, var(--amd), var(--amd-light));
+  }
+
+  /* ── KPI Cards ── */
+  .kpi-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(188px, 1fr)); gap: 14px; }
+  .kpi-card {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 20px;
+    transition: border-color 0.2s, transform 0.2s;
+    position: relative;
+    overflow: hidden;
+  }
+  .kpi-card::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    height: 3px;
+    background: var(--amd);
+    border-radius: 12px 12px 0 0;
+    opacity: 0;
+    transition: opacity 0.2s;
+  }
+  .kpi-card:hover { border-color: rgba(237,28,36,0.4); transform: translateY(-2px); }
+  .kpi-card:hover::before { opacity: 1; }
+  .kpi-label { font-size: 11px; color: var(--text-muted); margin-bottom: 8px; text-transform: uppercase; letter-spacing: 0.7px; }
+  .kpi-value { font-size: 24px; font-weight: 700; line-height: 1; margin-bottom: 6px; }
+  .kpi-sub { font-size: 11px; color: var(--text-muted); line-height: 1.5; }
+  .kpi-tag {
+    display: inline-block; margin-top: 10px;
+    padding: 2px 8px; border-radius: 4px;
+    font-size: 11px; font-weight: 600;
+  }
+  .tag-best  { background: rgba(0,212,170,0.15); color: #00D4AA; }
+  .tag-ok    { background: rgba(255,184,77,0.15); color: #FFB84D; }
+  .tag-warn  { background: rgba(237,28,36,0.15); color: #FF6B71; }
+  .tag-info  { background: rgba(88,101,242,0.15); color: #8B9FFF; }
+
+  /* ── Charts ── */
+  .chart-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(480px, 1fr)); gap: 20px; }
+  .chart-card {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 24px;
+  }
+  .chart-card.full { grid-column: 1 / -1; }
+  .chart-title { font-size: 14px; font-weight: 600; margin-bottom: 4px; }
+  .chart-sub { font-size: 12px; color: var(--text-muted); margin-bottom: 16px; }
+  .chart-wrap { position: relative; }
+
+  /* ── Tables ── */
+  .table-wrap { overflow-x: auto; border-radius: 10px; border: 1px solid var(--border); }
+  table { width: 100%; border-collapse: collapse; font-size: 13px; }
+  th {
+    background: rgba(237,28,36,0.10);
+    color: var(--text-muted);
+    font-weight: 600;
+    padding: 11px 14px;
+    text-align: left;
+    border-bottom: 1px solid var(--border);
+    white-space: nowrap;
+  }
+  th:first-child { color: var(--amd-light); }
+  td {
+    padding: 10px 14px;
+    border-bottom: 1px solid rgba(42,45,62,0.5);
+    white-space: nowrap;
+  }
+  tr:last-child td { border-bottom: none; }
+  tr:hover td { background: rgba(237,28,36,0.04); }
+  .td-name { font-weight: 600; color: var(--amd-light); }
+  .td-best { color: #00D4AA; font-weight: 600; }
+  .td-warn { color: #FF6B71; }
+  .td-muted { color: var(--text-muted); }
+  .badge {
+    display: inline-block; padding: 2px 8px; border-radius: 4px; font-size: 11px; font-weight: 600;
+  }
+  .badge-green  { background: rgba(0,212,170,0.18); color: #00D4AA; }
+  .badge-red    { background: rgba(237,28,36,0.18); color: #FF6B71; }
+  .badge-gold   { background: rgba(255,184,77,0.18); color: #FFB84D; }
+  .badge-blue   { background: rgba(88,101,242,0.18); color: #8B9FFF; }
+  .badge-gray   { background: rgba(139,143,168,0.18); color: #8B8FA8; }
+
+  /* ── Insight / Conclusion Cards ── */
+  .insight-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 16px; }
+  .insight-card {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-left: 3px solid;
+    border-radius: 12px;
+    padding: 18px 20px;
+  }
+  .insight-card.amd   { border-left-color: var(--amd); }
+  .insight-card.teal  { border-left-color: var(--teal); }
+  .insight-card.gold  { border-left-color: var(--gold); }
+  .insight-card.blue  { border-left-color: var(--blue); }
+  .insight-title { font-size: 13px; font-weight: 700; margin-bottom: 8px; }
+  .insight-body  { font-size: 13px; color: var(--text-muted); line-height: 1.75; }
+  .insight-body strong { color: var(--text); }
+
+  /* ── Divider ── */
+  .divider { height: 1px; background: var(--border); margin: 24px 0; }
+
+  /* ── Tabs ── */
+  .tabs { display: flex; gap: 4px; margin-bottom: 20px; background: var(--card2); border-radius: 10px; padding: 4px; width: fit-content; }
+  .tab {
+    padding: 8px 18px; border-radius: 7px; cursor: pointer;
+    font-size: 13px; color: var(--text-muted); transition: all 0.2s; user-select: none;
+  }
+  .tab.active { background: var(--amd); color: #fff; font-weight: 600; }
+  .tab-panel { display: none; }
+  .tab-panel.active { display: block; }
+
+  /* ── Footer ── */
+  footer {
+    border-top: 1px solid var(--border);
+    padding: 24px 40px;
+    font-size: 12px; color: var(--text-muted);
+    text-align: center;
+  }
+  footer a { color: var(--amd-light); text-decoration: none; }
+
+  /* ── Log scale note ── */
+  .log-note {
+    display: inline-flex; align-items: center; gap: 6px;
+    background: rgba(255,184,77,0.10); border: 1px solid rgba(255,184,77,0.25);
+    border-radius: 6px; padding: 4px 10px; font-size: 11px; color: var(--gold);
+    margin-bottom: 14px;
+  }
+
+  /* ── Responsive ── */
+  @media (max-width: 768px) {
+    .hero, main { padding-left: 20px; padding-right: 20px; }
+    .nav { padding: 0 20px; }
+    .chart-grid { grid-template-columns: 1fr; }
+    .kpi-grid { grid-template-columns: repeat(2, 1fr); }
+  }
+</style>
+</head>
+<body>
+
+<!-- ════════════════ HERO ════════════════ -->
+<div class="hero">
+  <div class="hero-badge">&#9654; AMD GPU 推理性能报告 · 2026年4月</div>
+  <h1>Qwen3-235B-A22B<br>AMD GPU 推理性能报告</h1>
+  <p class="hero-sub">2节点 × 8卡 AMD GPU &nbsp;|&nbsp; TP=8 PP=2 &nbsp;|&nbsp; vLLM 0.8.x &nbsp;|&nbsp; ROCm</p>
+  <div class="hero-meta">
+    <div class="hero-chip chip-amd"><span class="dot dot-amd"></span> AMD GPU · 16卡 (2节点)</div>
+    <div class="hero-chip"><span class="dot dot-gold"></span> Qwen3-235B-A22B (MoE)</div>
+    <div class="hero-chip"><span class="dot dot-teal"></span> rate / sync / conc 三类场景</div>
+    <div class="hero-chip">&#9889; 吞吐 · 延迟 · 并发 · 饱和分析</div>
+  </div>
+</div>
+
+<!-- ════════════════ NAV ════════════════ -->
+<nav class="nav">
+  <a class="nav-item active" href="#overview">概览</a>
+  <a class="nav-item" href="#throughput">吞吐量</a>
+  <a class="nav-item" href="#latency">延迟分析</a>
+  <a class="nav-item" href="#scenarios">场景分析</a>
+  <a class="nav-item" href="#detail">详细数据</a>
+  <a class="nav-item" href="#conclusion">结论建议</a>
+</nav>
+
+<main>
+
+<!-- ════════════════ 1. 概览 KPI ════════════════ -->
+<section class="section" id="overview">
+  <div class="section-title">概览 · 核心指标</div>
+  <div class="kpi-grid">
+    <div class="kpi-card">
+      <div class="kpi-label">最佳请求吞吐</div>
+      <div class="kpi-value" style="color:#ED1C24">1.615</div>
+      <div class="kpi-sub">req/s · rate_r16</div>
+      <span class="kpi-tag tag-best">峰值</span>
+    </div>
+    <div class="kpi-card">
+      <div class="kpi-label">最佳输出吞吐</div>
+      <div class="kpi-value" style="color:#FF6B71">1653.7</div>
+      <div class="kpi-sub">tok/s · rate_r16</div>
+      <span class="kpi-tag tag-best">峰值</span>
+    </div>
+    <div class="kpi-card">
+      <div class="kpi-label">最佳总 TPM</div>
+      <div class="kpi-value" style="color:#fff">186万</div>
+      <div class="kpi-sub">1,860,402 tok/min · rate_r16</div>
+      <span class="kpi-tag tag-best">峰值</span>
+    </div>
+    <div class="kpi-card">
+      <div class="kpi-label">conc_c4 TTFT P99</div>
+      <div class="kpi-value" style="color:#00D4AA">273 ms</div>
+      <div class="kpi-sub">最低首Token延迟</div>
+      <span class="kpi-tag tag-best">最优延迟</span>
+    </div>
+    <div class="kpi-card">
+      <div class="kpi-label">conc_c4 TPOT P99</div>
+      <div class="kpi-value" style="color:#00D4AA">43.3 ms</div>
+      <div class="kpi-sub">最低逐Token延迟</div>
+      <span class="kpi-tag tag-best">最优延迟</span>
+    </div>
+    <div class="kpi-card">
+      <div class="kpi-label">稳定平台区间</div>
+      <div class="kpi-value" style="color:#FFB84D">r8–r16</div>
+      <div class="kpi-sub">吞吐差异 &lt; 2%</div>
+      <span class="kpi-tag tag-ok">饱和</span>
+    </div>
+    <div class="kpi-card">
+      <div class="kpi-label">平台区吞吐</div>
+      <div class="kpi-value" style="color:#fff">~1.60</div>
+      <div class="kpi-sub">req/s · r8~r16 均值</div>
+      <span class="kpi-tag tag-ok">稳定</span>
+    </div>
+    <div class="kpi-card">
+      <div class="kpi-label">推荐生产速率</div>
+      <div class="kpi-value" style="color:#FFB84D">r8</div>
+      <div class="kpi-sub">吞吐/延迟综合最优</div>
+      <span class="kpi-tag tag-ok">推荐</span>
+    </div>
+  </div>
+
+  <div style="height:24px"></div>
+  <div class="insight-grid">
+    <div class="insight-card amd">
+      <div class="insight-title">系统性能概况</div>
+      <div class="insight-body">
+        2节点16卡 AMD GPU 运行 Qwen3-235B-A22B (MoE架构)，TP=8 PP=2 跨节点张量并行。
+        rate 场景下系统在 <strong>r8~r16 进入饱和平台</strong>，峰值吞吐 1.615 req/s，
+        输出吞吐 1653.7 tok/s，总 TPM 约 186万。
+      </div>
+    </div>
+    <div class="insight-card gold">
+      <div class="insight-title">TTFT 行为特征</div>
+      <div class="insight-body">
+        rate_r1 TTFT P99 仅 <strong>546 ms</strong>，健康可用；
+        rate_r2 起 TTFT P99 骤升至 <strong>58.8秒</strong>，r4 达 188秒，
+        说明请求队列深度远超系统实时处理能力，存在严重积压。
+        sync/conc 场景 TTFT 则维持在合理范围。
+      </div>
+    </div>
+    <div class="insight-card teal">
+      <div class="insight-title">TPOT 稳定性</div>
+      <div class="insight-body">
+        各场景 TPOT P99 极为稳定：rate 场景均在 <strong>260~318 ms</strong>，
+        conc_c4 低至 <strong>43.3 ms</strong>，sync 场景约 158~169 ms。
+        说明 GPU 算力充足，瓶颈在请求调度/队列，非计算侧。
+      </div>
+    </div>
+    <div class="insight-card blue">
+      <div class="insight-title">并发能力边界</div>
+      <div class="insight-body">
+        conc_c4 全部完成（400/400），<strong>系统在低并发下表现优异</strong>；
+        conc_c8 仅完成 43%（344/800），出现大量超时；
+        conc_c16 全部失败（0/1600），系统过载崩溃。
+        推荐并发上限为 <strong>4</strong>，需要更高并发须优化队列策略。
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ════════════════ 2. 吞吐量 ════════════════ -->
+<section class="section" id="throughput">
+  <div class="section-title">吞吐量分析 · rate 场景</div>
+  <div class="chart-grid">
+    <div class="chart-card full">
+      <div class="chart-title">请求吞吐 &amp; 输出 Token 吞吐 — rate 场景</div>
+      <div class="chart-sub">随请求速率提升，系统在 r8 附近进入饱和平台（r8–r16 差异 &lt; 2%）</div>
+      <div class="chart-wrap"><canvas id="chartThroughput" height="90"></canvas></div>
+    </div>
+    <div class="chart-card">
+      <div class="chart-title">总 TPM 趋势（Token Per Minute）</div>
+      <div class="chart-sub">总处理能力随速率提升后趋于饱和</div>
+      <div class="chart-wrap"><canvas id="chartTPM" height="200"></canvas></div>
+    </div>
+    <div class="chart-card">
+      <div class="chart-title">sync 场景吞吐对比</div>
+      <div class="chart-sub">不同输入/输出长度组合下的顺序请求性能</div>
+      <div class="chart-wrap"><canvas id="chartSync" height="200"></canvas></div>
+    </div>
+  </div>
+</section>
+
+<!-- ════════════════ 3. 延迟 ════════════════ -->
+<section class="section" id="latency">
+  <div class="section-title">延迟分析 · TTFT &amp; TPOT</div>
+
+  <div class="tabs" id="latencyTabs">
+    <div class="tab active" data-tab="ttft">TTFT（首Token延迟）</div>
+    <div class="tab" data-tab="tpot">TPOT（逐Token延迟）</div>
+    <div class="tab" data-tab="conc">并发场景延迟</div>
+  </div>
+
+  <div class="tab-panel active" id="tab-ttft">
+    <div class="log-note">&#9432; TTFT P99 跨度极大（546ms ~ 278秒），图表使用对数坐标轴</div>
+    <div class="chart-grid">
+      <div class="chart-card full">
+        <div class="chart-title">TTFT P99 — rate 场景（对数坐标）</div>
+        <div class="chart-sub">r1 正常，r2 起队列积压导致 TTFT 骤增，r8 后进入平台</div>
+        <div class="chart-wrap"><canvas id="chartTTFTLog" height="90"></canvas></div>
+      </div>
+      <div class="chart-card">
+        <div class="chart-title">TTFT Median — rate 场景</div>
+        <div class="chart-sub">中位数反映典型请求体验</div>
+        <div class="chart-wrap"><canvas id="chartTTFTMed" height="200"></canvas></div>
+      </div>
+      <div class="chart-card">
+        <div class="chart-title">TTFT Mean vs P99 对比</div>
+        <div class="chart-sub">均值与 P99 的巨大差异揭示长尾问题</div>
+        <div class="chart-wrap"><canvas id="chartTTFTMeanP99" height="200"></canvas></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="tab-panel" id="tab-tpot">
+    <div class="chart-grid">
+      <div class="chart-card full">
+        <div class="chart-title">TPOT P99 — rate 场景（各速率下的逐Token生成延迟）</div>
+        <div class="chart-sub">TPOT 在各速率下均保持稳定，算力利用充分</div>
+        <div class="chart-wrap"><canvas id="chartTPOT" height="90"></canvas></div>
+      </div>
+      <div class="chart-card">
+        <div class="chart-title">TPOT Median vs P99</div>
+        <div class="chart-sub">P99 与 Median 差异反映生成延迟一致性</div>
+        <div class="chart-wrap"><canvas id="chartTPOTMedP99" height="200"></canvas></div>
+      </div>
+      <div class="chart-card">
+        <div class="chart-title">ITL P99 — rate 场景</div>
+        <div class="chart-sub">Inter-Token Latency P99，与 TPOT 趋势一致</div>
+        <div class="chart-wrap"><canvas id="chartITL" height="200"></canvas></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="tab-panel" id="tab-conc">
+    <div class="chart-grid">
+      <div class="chart-card">
+        <div class="chart-title">conc 场景 TTFT P99</div>
+        <div class="chart-sub">并发 4→8 首Token延迟急剧恶化</div>
+        <div class="chart-wrap"><canvas id="chartConcTTFT" height="220"></canvas></div>
+      </div>
+      <div class="chart-card">
+        <div class="chart-title">conc 场景 TPOT P99</div>
+        <div class="chart-sub">并发 4→8 生成延迟翻3倍</div>
+        <div class="chart-wrap"><canvas id="chartConcTPOT" height="220"></canvas></div>
+      </div>
+      <div class="chart-card full">
+        <div class="chart-title">conc 场景完成率对比</div>
+        <div class="chart-sub">并发 8 开始出现大量超时，并发 16 完全失败</div>
+        <div class="chart-wrap"><canvas id="chartConcRate" height="80"></canvas></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ════════════════ 4. 场景分析 ════════════════ -->
+<section class="section" id="scenarios">
+  <div class="section-title">场景类型分析</div>
+  <div class="chart-grid">
+    <div class="chart-card">
+      <div class="chart-title">三类场景请求吞吐对比（req/s）</div>
+      <div class="chart-sub">rate、sync、conc 各最优配置吞吐横向对比</div>
+      <div class="chart-wrap"><canvas id="chartScenarioThroughput" height="240"></canvas></div>
+    </div>
+    <div class="chart-card">
+      <div class="chart-title">三类场景输出吞吐对比（tok/s）</div>
+      <div class="chart-sub">输出 token 速率对比</div>
+      <div class="chart-wrap"><canvas id="chartScenarioTokPS" height="240"></canvas></div>
+    </div>
+  </div>
+
+  <div style="height:24px"></div>
+  <div class="insight-grid">
+    <div class="insight-card amd">
+      <div class="insight-title">rate 场景 — 持续压力测试</div>
+      <div class="insight-body">
+        以固定请求速率连续发送 1000 个请求。系统在 <strong>r2 (2 req/s)</strong> 开始出现队列积压，
+        r8 进入饱和后吞吐不再显著增长。最佳吞吐 <strong>1.615 req/s</strong>，
+        推荐以 r8 为生产速率上限，兼顾吞吐与服务质量。
+      </div>
+    </div>
+    <div class="insight-card teal">
+      <div class="insight-title">sync 场景 — 顺序单请求</div>
+      <div class="insight-body">
+        逐一发送请求，前一个完成才发下一个。最短输出 (128tok) 下吞吐最高达
+        <strong>8.073 req/s</strong>，输出 tok/s 最高 1259.8。
+        TTFT 和 TPOT 均较稳定，是验证系统单路延迟的理想场景。
+      </div>
+    </div>
+    <div class="insight-card gold">
+      <div class="insight-title">conc 场景 — 并发限制测试</div>
+      <div class="insight-body">
+        同时保持固定数量的并发请求。conc=4 为安全边界，
+        <strong>全部 400 请求完成</strong>，TTFT P99 仅 273ms，TPOT P99 仅 43.3ms。
+        conc=8 成功率仅 43%，conc=16 完全失败，系统并发容量有限。
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ════════════════ 5. 详细数据 ════════════════ -->
+<section class="section" id="detail">
+  <div class="section-title">详细数据表</div>
+
+  <div class="tabs" id="detailTabs">
+    <div class="tab active" data-tab="d-rate">rate 场景</div>
+    <div class="tab" data-tab="d-sync">sync 场景</div>
+    <div class="tab" data-tab="d-conc">conc 场景</div>
+  </div>
+
+  <!-- rate 表 -->
+  <div class="tab-panel active" id="tab-d-rate">
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th>场景</th>
+            <th>req/s</th>
+            <th>输出tok/s</th>
+            <th>总TPM</th>
+            <th>TTFT mean(ms)</th>
+            <th>TTFT med(ms)</th>
+            <th>TTFT P99(ms)</th>
+            <th>TPOT mean(ms)</th>
+            <th>TPOT med(ms)</th>
+            <th>TPOT P99(ms)</th>
+            <th>ITL mean(ms)</th>
+            <th>ITL P99(ms)</th>
+            <th>测试时长(s)</th>
+            <th>状态</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td class="td-name">rate_r1</td>
+            <td>0.870</td>
+            <td>891.3</td>
+            <td class="td-muted">1,002,712</td>
+            <td>364.5</td>
+            <td>362.9</td>
+            <td class="td-best">546.0</td>
+            <td>230.1</td>
+            <td>246.1</td>
+            <td>260.3</td>
+            <td>230.1</td>
+            <td>312.2</td>
+            <td>1148.9</td>
+            <td><span class="badge badge-green">健康</span></td>
+          </tr>
+          <tr>
+            <td class="td-name">rate_r2</td>
+            <td>1.333</td>
+            <td>1365.0</td>
+            <td class="td-muted">1,535,590</td>
+            <td class="td-warn">14,184.4</td>
+            <td>430.6</td>
+            <td class="td-warn">58,789.3</td>
+            <td>267.6</td>
+            <td>280.5</td>
+            <td>304.9</td>
+            <td>267.6</td>
+            <td>357.2</td>
+            <td>750.2</td>
+            <td><span class="badge badge-gold">积压</span></td>
+          </tr>
+          <tr>
+            <td class="td-name">rate_r4</td>
+            <td>1.483</td>
+            <td>1519.0</td>
+            <td class="td-muted">1,708,900</td>
+            <td class="td-warn">80,915.5</td>
+            <td>554.4</td>
+            <td class="td-warn">188,506.9</td>
+            <td>279.6</td>
+            <td>284.1</td>
+            <td>307.4</td>
+            <td>279.6</td>
+            <td>360.5</td>
+            <td>674.1</td>
+            <td><span class="badge badge-red">严重积压</span></td>
+          </tr>
+          <tr>
+            <td class="td-name">rate_r6</td>
+            <td>1.504</td>
+            <td>1540.0</td>
+            <td class="td-muted">1,732,478</td>
+            <td class="td-warn">111,007.3</td>
+            <td>562.7</td>
+            <td class="td-warn">241,091.5</td>
+            <td>292.4</td>
+            <td>291.7</td>
+            <td>317.5</td>
+            <td>292.4</td>
+            <td>378.7</td>
+            <td>664.9</td>
+            <td><span class="badge badge-red">饱和</span></td>
+          </tr>
+          <tr>
+            <td class="td-name" style="color:#FFB84D">rate_r8 ★</td>
+            <td class="td-best">1.587</td>
+            <td class="td-best">1624.8</td>
+            <td class="td-muted">1,827,881</td>
+            <td class="td-warn">112,211.9</td>
+            <td>594.7</td>
+            <td class="td-warn">241,337.4</td>
+            <td>283.3</td>
+            <td>285.7</td>
+            <td class="td-best">297.2</td>
+            <td>283.3</td>
+            <td>366.8</td>
+            <td>630.2</td>
+            <td><span class="badge badge-gold">推荐</span></td>
+          </tr>
+          <tr>
+            <td class="td-name">rate_r10</td>
+            <td>1.584</td>
+            <td>1622.0</td>
+            <td class="td-muted">1,824,720</td>
+            <td class="td-warn">123,281.5</td>
+            <td>670.1</td>
+            <td class="td-warn">260,641.9</td>
+            <td>289.1</td>
+            <td>289.3</td>
+            <td>303.6</td>
+            <td>289.1</td>
+            <td>382.0</td>
+            <td>631.3</td>
+            <td><span class="badge badge-blue">平台区</span></td>
+          </tr>
+          <tr>
+            <td class="td-name">rate_r12</td>
+            <td>1.604</td>
+            <td>1642.6</td>
+            <td class="td-muted">1,847,891</td>
+            <td class="td-warn">125,473.4</td>
+            <td>788.0</td>
+            <td class="td-warn">264,043.1</td>
+            <td>288.4</td>
+            <td>290.0</td>
+            <td>298.6</td>
+            <td>288.4</td>
+            <td>375.2</td>
+            <td>623.4</td>
+            <td><span class="badge badge-blue">平台区</span></td>
+          </tr>
+          <tr>
+            <td class="td-name">rate_r16</td>
+            <td class="td-best">1.615</td>
+            <td class="td-best">1653.7</td>
+            <td class="td-best">1,860,402</td>
+            <td class="td-warn">133,114.8</td>
+            <td class="td-warn">1068.8</td>
+            <td class="td-warn">278,073.6</td>
+            <td>290.1</td>
+            <td>290.5</td>
+            <td>299.9</td>
+            <td>290.1</td>
+            <td>380.1</td>
+            <td>619.2</td>
+            <td><span class="badge badge-blue">峰值</span></td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+    <p style="font-size:12px;color:var(--text-muted);margin-top:10px">
+      * 所有 rate 场景：inp=128 tok, out=1024 tok, 1000 prompts。★ 推荐配置：r8 综合最优。
+    </p>
+  </div>
+
+  <!-- sync 表 -->
+  <div class="tab-panel" id="tab-d-sync">
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th>场景</th>
+            <th>inp</th>
+            <th>out</th>
+            <th>req/s</th>
+            <th>输出tok/s</th>
+            <th>TTFT mean(ms)</th>
+            <th>TTFT med(ms)</th>
+            <th>TTFT P99(ms)</th>
+            <th>TPOT mean(ms)</th>
+            <th>TPOT med(ms)</th>
+            <th>TPOT P99(ms)</th>
+            <th>ITL P99(ms)</th>
+            <th>测试时长(s)</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td class="td-name">sync_inp128_out128</td>
+            <td>128</td>
+            <td>128</td>
+            <td class="td-best">8.073</td>
+            <td class="td-best">1033.3</td>
+            <td>3612.1</td>
+            <td>3491.4</td>
+            <td>7392.9</td>
+            <td>156.3</td>
+            <td>157.8</td>
+            <td>169.9</td>
+            <td>286.0</td>
+            <td>24.8</td>
+          </tr>
+          <tr>
+            <td class="td-name">sync_inp128_out1024</td>
+            <td>128</td>
+            <td>1024</td>
+            <td>1.230</td>
+            <td>1259.8</td>
+            <td class="td-best">846.4</td>
+            <td class="td-best">876.5</td>
+            <td class="td-best">1272.7</td>
+            <td class="td-best">157.9</td>
+            <td class="td-best">157.9</td>
+            <td class="td-best">158.1</td>
+            <td class="td-best">176.6</td>
+            <td>162.6</td>
+          </tr>
+          <tr>
+            <td class="td-name">sync_inp512_out1024</td>
+            <td>512</td>
+            <td>1024</td>
+            <td>1.102</td>
+            <td>1128.1</td>
+            <td>10256.1</td>
+            <td>9857.6</td>
+            <td>22065.6</td>
+            <td>163.4</td>
+            <td>164.0</td>
+            <td>168.2</td>
+            <td>289.0</td>
+            <td>181.6</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+    <p style="font-size:12px;color:var(--text-muted);margin-top:10px">
+      * sync 场景：顺序单路发送，前一请求完成后发送下一个（rate=inf 实为顺序无限速）。
+    </p>
+  </div>
+
+  <!-- conc 表 -->
+  <div class="tab-panel" id="tab-d-conc">
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th>场景</th>
+            <th>并发数</th>
+            <th>总请求</th>
+            <th>完成数</th>
+            <th>失败数</th>
+            <th>完成率</th>
+            <th>req/s</th>
+            <th>输出tok/s</th>
+            <th>TTFT mean(ms)</th>
+            <th>TTFT med(ms)</th>
+            <th>TTFT P99(ms)</th>
+            <th>TPOT mean(ms)</th>
+            <th>TPOT med(ms)</th>
+            <th>TPOT P99(ms)</th>
+            <th>ITL P99(ms)</th>
+            <th>测试时长(s)</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td class="td-name">conc_c4</td>
+            <td>4</td>
+            <td>400</td>
+            <td class="td-best">400</td>
+            <td class="td-best">0</td>
+            <td><span class="badge badge-green">100%</span></td>
+            <td>0.094</td>
+            <td>95.8</td>
+            <td class="td-best">210.9</td>
+            <td class="td-best">218.8</td>
+            <td class="td-best">273.1</td>
+            <td class="td-best">41.6</td>
+            <td class="td-best">41.6</td>
+            <td class="td-best">43.3</td>
+            <td class="td-best">52.4</td>
+            <td>4273.4</td>
+          </tr>
+          <tr>
+            <td class="td-name">conc_c8</td>
+            <td>8</td>
+            <td>800</td>
+            <td class="td-warn">344</td>
+            <td class="td-warn">456</td>
+            <td><span class="badge badge-red">43%</span></td>
+            <td>0.113</td>
+            <td>113.2</td>
+            <td>238.6</td>
+            <td>189.4</td>
+            <td class="td-warn">2668.6</td>
+            <td>85.6</td>
+            <td>62.8</td>
+            <td class="td-warn">130.3</td>
+            <td>72.7</td>
+            <td>3048.1</td>
+          </tr>
+          <tr>
+            <td class="td-name" style="color:#FF6B71">conc_c16</td>
+            <td>16</td>
+            <td>1600</td>
+            <td class="td-warn">0</td>
+            <td class="td-warn">1600</td>
+            <td><span class="badge badge-red">0%</span></td>
+            <td class="td-muted">—</td>
+            <td class="td-muted">—</td>
+            <td class="td-muted">—</td>
+            <td class="td-muted">—</td>
+            <td class="td-muted">—</td>
+            <td class="td-muted">—</td>
+            <td class="td-muted">—</td>
+            <td class="td-muted">—</td>
+            <td class="td-muted">—</td>
+            <td class="td-muted">—</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+    <p style="font-size:12px;color:var(--text-muted);margin-top:10px">
+      * conc 场景：inp=128 tok, out=1024 tok，维持固定并发数持续发送。
+    </p>
+  </div>
+</section>
+
+<!-- ════════════════ 6. 结论 ════════════════ -->
+<section class="section" id="conclusion">
+  <div class="section-title">结论与建议</div>
+  <div class="insight-grid">
+    <div class="insight-card amd">
+      <div class="insight-title">推荐生产配置</div>
+      <div class="insight-body">
+        <strong>rate_r8</strong>：请求速率 8 req/s 为推荐上限。<br>
+        系统吞吐 <strong>1.587 req/s</strong>，输出 1624.8 tok/s，总 TPM 约 183万。<br>
+        TPOT P99 仅 297ms，用户体验可接受。<br>
+        超过此速率吞吐增益 &lt;2%，但 TTFT 已无法恢复。
+      </div>
+    </div>
+    <div class="insight-card teal">
+      <div class="insight-title">低延迟场景推荐</div>
+      <div class="insight-body">
+        <strong>conc_c4</strong>：对延迟敏感的应用，推荐保持并发 ≤ 4。<br>
+        TTFT P99 <strong>273ms</strong>，TPOT P99 <strong>43.3ms</strong>，<br>
+        100% 完成率，无失败。适合交互式对话类应用。
+      </div>
+    </div>
+    <div class="insight-card gold">
+      <div class="insight-title">TTFT 骤增原因分析</div>
+      <div class="insight-body">
+        rate_r2 起 TTFT P99 从 546ms 骤升至 58.8秒（约 <strong>108倍</strong>）。<br>
+        根本原因：Qwen3-235B-A22B 单次 prefill 极重（235B参数、MoE路由），
+        实际系统处理能力约 <strong>~1.3 req/s</strong>，输入速率 2 req/s 已超过容量，
+        导致队列深度持续增长，TTFT 随积压时间线性累加。<br>
+        <strong>解决方向</strong>：引入限流/背压、chunked prefill 分片、
+        或调整 max_num_seqs 参数限制 KV-Cache 并发。
+      </div>
+    </div>
+    <div class="insight-card blue">
+      <div class="insight-title">并发改善方向</div>
+      <div class="insight-body">
+        当前 conc_c8 成功率 43%，conc_c16 完全失败。建议：<br>
+        1. 调大超时时限（timeout），减少假失败<br>
+        2. 开启 <strong>chunked prefill</strong> 降低单次 prefill 耗时<br>
+        3. 调整 <strong>max_num_seqs</strong> 与 <strong>max_num_batched_tokens</strong><br>
+        4. 考虑请求队列优先级策略（FCFS → Shortest-First）
+      </div>
+    </div>
+    <div class="insight-card amd">
+      <div class="insight-title">平台饱和区间特征</div>
+      <div class="insight-body">
+        r8 至 r16 区间内，吞吐从 1.587 到 1.615 req/s，增幅仅 <strong>1.8%</strong>。
+        TPOT 极为稳定（P99 约 297~318ms），说明 GPU 计算侧已充分利用。
+        瓶颈主要在 <strong>prefill 队列调度</strong>，非 GPU 算力不足。
+      </div>
+    </div>
+    <div class="insight-card teal">
+      <div class="insight-title">优化优先级</div>
+      <div class="insight-body">
+        1. <strong>高优</strong>：解决 rate&gt;r1 的 TTFT 积压（chunked prefill / 限流）<br>
+        2. <strong>中优</strong>：提升 conc 并发容量上限（目前仅 c4 可用）<br>
+        3. <strong>低优</strong>：探索 PP=4 分流减少单节点 KV-Cache 压力<br>
+        4. <strong>监控</strong>：建立 TTFT P99 &lt; 2s 的 SLA 告警阈值
+      </div>
+    </div>
+  </div>
+</section>
+
+</main>
+
+<footer>
+  <div>Qwen3-235B-A22B · AMD GPU 推理性能报告 · 2节点 × 8卡 · TP=8 PP=2 · vLLM 0.8.x · ROCm · 2026年4月</div>
+  <div style="margin-top:6px">数据来源：内部基准测试 · 本报告仅供参考</div>
+</footer>
+
+<script>
+/* ─── 全局 Chart.js 默认配置 ─── */
+Chart.defaults.color = '#8B8FA8';
+Chart.defaults.borderColor = '#2A2D3E';
+Chart.defaults.font.family = "'Segoe UI', 'PingFang SC', sans-serif";
+Chart.defaults.font.size = 12;
+
+const AMD_RED   = '#ED1C24';
+const AMD_LIGHT = '#FF6B71';
+const TEAL      = '#00D4AA';
+const GOLD      = '#FFB84D';
+const BLUE      = '#5865F2';
+const MUTED     = '#8B8FA8';
+
+const RATE_LABELS = ['r1','r2','r4','r6','r8','r10','r12','r16'];
+
+/* ─── 吞吐量图（双轴 req/s + tok/s） ─── */
+new Chart(document.getElementById('chartThroughput'), {
+  type: 'bar',
+  data: {
+    labels: RATE_LABELS,
+    datasets: [
+      {
+        label: '请求吞吐 (req/s)',
+        data: [0.870, 1.333, 1.483, 1.504, 1.587, 1.584, 1.604, 1.615],
+        backgroundColor: 'rgba(237,28,36,0.75)',
+        borderColor: AMD_RED,
+        borderWidth: 1,
+        borderRadius: 4,
+        yAxisID: 'y1',
+      },
+      {
+        label: '输出吞吐 (tok/s)',
+        data: [891.3, 1365.0, 1519.0, 1540.0, 1624.8, 1622.0, 1642.6, 1653.7],
+        type: 'line',
+        borderColor: TEAL,
+        backgroundColor: 'rgba(0,212,170,0.08)',
+        borderWidth: 2.5,
+        pointRadius: 5,
+        pointBackgroundColor: TEAL,
+        tension: 0.3,
+        yAxisID: 'y2',
+        fill: true,
+      }
+    ]
+  },
+  options: {
+    responsive: true,
+    interaction: { mode: 'index', intersect: false },
+    plugins: {
+      legend: { position: 'top', labels: { color: '#E8EAED', padding: 16 } },
+      tooltip: {
+        callbacks: {
+          label: ctx => ctx.dataset.label + ': ' + ctx.parsed.y.toFixed(ctx.datasetIndex === 0 ? 3 : 1)
+        }
+      }
+    },
+    scales: {
+      x: { grid: { color: '#2A2D3E' } },
+      y1: {
+        position: 'left',
+        title: { display: true, text: 'req/s', color: AMD_LIGHT },
+        grid: { color: '#2A2D3E' },
+      },
+      y2: {
+        position: 'right',
+        title: { display: true, text: 'tok/s', color: TEAL },
+        grid: { drawOnChartArea: false },
+      }
+    }
+  }
+});
+
+/* ─── 总 TPM ─── */
+new Chart(document.getElementById('chartTPM'), {
+  type: 'line',
+  data: {
+    labels: RATE_LABELS,
+    datasets: [{
+      label: '总 TPM',
+      data: [1002712, 1535590, 1708900, 1732478, 1827881, 1824720, 1847891, 1860402],
+      borderColor: AMD_RED,
+      backgroundColor: 'rgba(237,28,36,0.12)',
+      borderWidth: 2.5,
+      pointRadius: 5,
+      pointBackgroundColor: AMD_RED,
+      tension: 0.3,
+      fill: true,
+    }]
+  },
+  options: {
+    responsive: true,
+    plugins: {
+      legend: { display: false },
+      tooltip: {
+        callbacks: {
+          label: ctx => 'TPM: ' + ctx.parsed.y.toLocaleString()
+        }
+      }
+    },
+    scales: {
+      x: { grid: { color: '#2A2D3E' } },
+      y: {
+        grid: { color: '#2A2D3E' },
+        ticks: {
+          callback: v => (v/10000).toFixed(0) + '万'
+        }
+      }
+    }
+  }
+});
+
+/* ─── sync 吞吐 ─── */
+new Chart(document.getElementById('chartSync'), {
+  type: 'bar',
+  data: {
+    labels: ['128→128', '128→1024', '512→1024'],
+    datasets: [
+      {
+        label: 'req/s',
+        data: [8.073, 1.230, 1.102],
+        backgroundColor: ['rgba(237,28,36,0.8)', 'rgba(237,28,36,0.6)', 'rgba(237,28,36,0.4)'],
+        borderRadius: 4,
+        yAxisID: 'y1',
+      },
+      {
+        label: '输出tok/s',
+        data: [1033.3, 1259.8, 1128.1],
+        type: 'line',
+        borderColor: GOLD,
+        pointBackgroundColor: GOLD,
+        borderWidth: 2,
+        pointRadius: 5,
+        tension: 0.2,
+        yAxisID: 'y2',
+      }
+    ]
+  },
+  options: {
+    responsive: true,
+    plugins: { legend: { labels: { color: '#E8EAED' } } },
+    scales: {
+      x: { grid: { color: '#2A2D3E' } },
+      y1: { position: 'left', title: { display: true, text: 'req/s', color: AMD_LIGHT }, grid: { color: '#2A2D3E' } },
+      y2: { position: 'right', title: { display: true, text: 'tok/s', color: GOLD }, grid: { drawOnChartArea: false } }
+    }
+  }
+});
+
+/* ─── TTFT P99 Log ─── */
+new Chart(document.getElementById('chartTTFTLog'), {
+  type: 'line',
+  data: {
+    labels: RATE_LABELS,
+    datasets: [{
+      label: 'TTFT P99 (ms) — 对数坐标',
+      data: [546.0, 58789.3, 188506.9, 241091.5, 241337.4, 260641.9, 264043.1, 278073.6],
+      borderColor: AMD_RED,
+      backgroundColor: 'rgba(237,28,36,0.10)',
+      borderWidth: 2.5,
+      pointRadius: 6,
+      pointBackgroundColor: d => {
+        const v = d.parsed?.y;
+        return v < 1000 ? TEAL : AMD_RED;
+      },
+      tension: 0.2,
+      fill: true,
+    }]
+  },
+  options: {
+    responsive: true,
+    plugins: {
+      legend: { display: false },
+      tooltip: {
+        callbacks: {
+          label: ctx => 'TTFT P99: ' + (ctx.parsed.y >= 1000
+            ? (ctx.parsed.y/1000).toFixed(1) + ' s'
+            : ctx.parsed.y.toFixed(0) + ' ms')
+        }
+      }
+    },
+    scales: {
+      x: { grid: { color: '#2A2D3E' } },
+      y: {
+        type: 'logarithmic',
+        grid: { color: '#2A2D3E' },
+        ticks: {
+          callback: v => v >= 1000 ? (v/1000).toFixed(0)+'s' : v+'ms'
+        }
+      }
+    }
+  }
+});
+
+/* ─── TTFT Median ─── */
+new Chart(document.getElementById('chartTTFTMed'), {
+  type: 'bar',
+  data: {
+    labels: RATE_LABELS,
+    datasets: [{
+      label: 'TTFT Median (ms)',
+      data: [362.9, 430.6, 554.4, 562.7, 594.7, 670.1, 788.0, 1068.8],
+      backgroundColor: RATE_LABELS.map((_, i) => i < 1 ? 'rgba(0,212,170,0.7)' : 'rgba(237,28,36,0.6)'),
+      borderRadius: 4,
+    }]
+  },
+  options: {
+    responsive: true,
+    plugins: { legend: { display: false } },
+    scales: {
+      x: { grid: { color: '#2A2D3E' } },
+      y: { grid: { color: '#2A2D3E' }, title: { display: true, text: 'ms', color: MUTED } }
+    }
+  }
+});
+
+/* ─── TTFT Mean vs P99 ─── */
+new Chart(document.getElementById('chartTTFTMeanP99'), {
+  type: 'bar',
+  data: {
+    labels: RATE_LABELS,
+    datasets: [
+      {
+        label: 'TTFT Mean (ms)',
+        data: [364.5, 14184.4, 80915.5, 111007.3, 112211.9, 123281.5, 125473.4, 133114.8],
+        backgroundColor: 'rgba(255,184,77,0.6)',
+        borderRadius: 4,
+        yAxisID: 'y',
+      },
+      {
+        label: 'TTFT P99 (ms)',
+        data: [546.0, 58789.3, 188506.9, 241091.5, 241337.4, 260641.9, 264043.1, 278073.6],
+        backgroundColor: 'rgba(237,28,36,0.55)',
+        borderRadius: 4,
+        yAxisID: 'y',
+      }
+    ]
+  },
+  options: {
+    responsive: true,
+    plugins: { legend: { labels: { color: '#E8EAED' } } },
+    scales: {
+      x: { grid: { color: '#2A2D3E' } },
+      y: {
+        type: 'logarithmic',
+        grid: { color: '#2A2D3E' },
+        ticks: { callback: v => v >= 1000 ? (v/1000).toFixed(0)+'s' : v+'ms' }
+      }
+    }
+  }
+});
+
+/* ─── TPOT P99 折线 ─── */
+new Chart(document.getElementById('chartTPOT'), {
+  type: 'line',
+  data: {
+    labels: RATE_LABELS,
+    datasets: [
+      {
+        label: 'TPOT P99 (ms)',
+        data: [260.3, 304.9, 307.4, 317.5, 297.2, 303.6, 298.6, 299.9],
+        borderColor: AMD_RED,
+        backgroundColor: 'rgba(237,28,36,0.10)',
+        borderWidth: 2.5,
+        pointRadius: 5,
+        pointBackgroundColor: AMD_RED,
+        tension: 0.3,
+        fill: true,
+      },
+      {
+        label: 'TPOT Mean (ms)',
+        data: [230.1, 267.6, 279.6, 292.4, 283.3, 289.1, 288.4, 290.1],
+        borderColor: GOLD,
+        borderDash: [5,3],
+        borderWidth: 2,
+        pointRadius: 4,
+        pointBackgroundColor: GOLD,
+        tension: 0.3,
+      }
+    ]
+  },
+  options: {
+    responsive: true,
+    plugins: { legend: { labels: { color: '#E8EAED' } } },
+    scales: {
+      x: { grid: { color: '#2A2D3E' } },
+      y: {
+        grid: { color: '#2A2D3E' },
+        min: 200, max: 340,
+        title: { display: true, text: 'ms', color: MUTED }
+      }
+    }
+  }
+});
+
+/* ─── TPOT Med vs P99 ─── */
+new Chart(document.getElementById('chartTPOTMedP99'), {
+  type: 'bar',
+  data: {
+    labels: RATE_LABELS,
+    datasets: [
+      {
+        label: 'TPOT Median (ms)',
+        data: [246.1, 280.5, 284.1, 291.7, 285.7, 289.3, 290.0, 290.5],
+        backgroundColor: 'rgba(0,212,170,0.55)',
+        borderRadius: 4,
+      },
+      {
+        label: 'TPOT P99 (ms)',
+        data: [260.3, 304.9, 307.4, 317.5, 297.2, 303.6, 298.6, 299.9],
+        backgroundColor: 'rgba(237,28,36,0.6)',
+        borderRadius: 4,
+      }
+    ]
+  },
+  options: {
+    responsive: true,
+    plugins: { legend: { labels: { color: '#E8EAED' } } },
+    scales: {
+      x: { grid: { color: '#2A2D3E' } },
+      y: { grid: { color: '#2A2D3E' }, min: 220, title: { display: true, text: 'ms', color: MUTED } }
+    }
+  }
+});
+
+/* ─── ITL P99 ─── */
+new Chart(document.getElementById('chartITL'), {
+  type: 'bar',
+  data: {
+    labels: RATE_LABELS,
+    datasets: [{
+      label: 'ITL P99 (ms)',
+      data: [312.2, 357.2, 360.5, 378.7, 366.8, 382.0, 375.2, 380.1],
+      backgroundColor: 'rgba(88,101,242,0.6)',
+      borderColor: BLUE,
+      borderWidth: 1,
+      borderRadius: 4,
+    }]
+  },
+  options: {
+    responsive: true,
+    plugins: { legend: { display: false } },
+    scales: {
+      x: { grid: { color: '#2A2D3E' } },
+      y: { grid: { color: '#2A2D3E' }, min: 280, title: { display: true, text: 'ms', color: MUTED } }
+    }
+  }
+});
+
+/* ─── conc TTFT ─── */
+new Chart(document.getElementById('chartConcTTFT'), {
+  type: 'bar',
+  data: {
+    labels: ['conc_c4', 'conc_c8'],
+    datasets: [
+      {
+        label: 'TTFT Mean (ms)',
+        data: [210.9, 238.6],
+        backgroundColor: 'rgba(0,212,170,0.6)',
+        borderRadius: 4,
+      },
+      {
+        label: 'TTFT P99 (ms)',
+        data: [273.1, 2668.6],
+        backgroundColor: 'rgba(237,28,36,0.65)',
+        borderRadius: 4,
+      }
+    ]
+  },
+  options: {
+    responsive: true,
+    plugins: { legend: { labels: { color: '#E8EAED' } } },
+    scales: {
+      x: { grid: { color: '#2A2D3E' } },
+      y: {
+        type: 'logarithmic',
+        grid: { color: '#2A2D3E' },
+        ticks: { callback: v => v >= 1000 ? (v/1000).toFixed(1)+'s' : v+'ms' }
+      }
+    }
+  }
+});
+
+/* ─── conc TPOT ─── */
+new Chart(document.getElementById('chartConcTPOT'), {
+  type: 'bar',
+  data: {
+    labels: ['conc_c4', 'conc_c8'],
+    datasets: [
+      {
+        label: 'TPOT Mean (ms)',
+        data: [41.6, 85.6],
+        backgroundColor: 'rgba(0,212,170,0.6)',
+        borderRadius: 4,
+      },
+      {
+        label: 'TPOT P99 (ms)',
+        data: [43.3, 130.3],
+        backgroundColor: 'rgba(237,28,36,0.65)',
+        borderRadius: 4,
+      }
+    ]
+  },
+  options: {
+    responsive: true,
+    plugins: { legend: { labels: { color: '#E8EAED' } } },
+    scales: {
+      x: { grid: { color: '#2A2D3E' } },
+      y: { grid: { color: '#2A2D3E' }, title: { display: true, text: 'ms', color: MUTED } }
+    }
+  }
+});
+
+/* ─── conc 完成率 ─── */
+new Chart(document.getElementById('chartConcRate'), {
+  type: 'bar',
+  data: {
+    labels: ['conc_c4', 'conc_c8', 'conc_c16'],
+    datasets: [{
+      label: '完成率 (%)',
+      data: [100, 43, 0],
+      backgroundColor: ['rgba(0,212,170,0.75)', 'rgba(255,184,77,0.75)', 'rgba(237,28,36,0.75)'],
+      borderRadius: 6,
+    }]
+  },
+  options: {
+    indexAxis: 'y',
+    responsive: true,
+    plugins: {
+      legend: { display: false },
+      tooltip: {
+        callbacks: {
+          label: ctx => '完成率: ' + ctx.parsed.x + '%'
+        }
+      }
+    },
+    scales: {
+      x: { grid: { color: '#2A2D3E' }, min: 0, max: 100, ticks: { callback: v => v + '%' } },
+      y: { grid: { color: '#2A2D3E' } }
+    }
+  }
+});
+
+/* ─── 场景对比 req/s ─── */
+new Chart(document.getElementById('chartScenarioThroughput'), {
+  type: 'bar',
+  data: {
+    labels: ['rate_r8 (推荐)', 'rate_r16 (峰值)', 'sync_128_128', 'sync_128_1024', 'sync_512_1024', 'conc_c4'],
+    datasets: [{
+      label: 'req/s',
+      data: [1.587, 1.615, 8.073, 1.230, 1.102, 0.094],
+      backgroundColor: [
+        'rgba(237,28,36,0.75)', 'rgba(237,28,36,0.9)',
+        'rgba(0,212,170,0.75)', 'rgba(0,212,170,0.55)', 'rgba(0,212,170,0.45)',
+        'rgba(88,101,242,0.75)'
+      ],
+      borderRadius: 5,
+    }]
+  },
+  options: {
+    indexAxis: 'y',
+    responsive: true,
+    plugins: { legend: { display: false } },
+    scales: {
+      x: { grid: { color: '#2A2D3E' } },
+      y: { grid: { color: '#2A2D3E' } }
+    }
+  }
+});
+
+/* ─── 场景对比 tok/s ─── */
+new Chart(document.getElementById('chartScenarioTokPS'), {
+  type: 'bar',
+  data: {
+    labels: ['rate_r8', 'rate_r16', 'sync_128_128', 'sync_128_1024', 'sync_512_1024', 'conc_c4'],
+    datasets: [{
+      label: '输出 tok/s',
+      data: [1624.8, 1653.7, 1033.3, 1259.8, 1128.1, 95.8],
+      backgroundColor: [
+        'rgba(237,28,36,0.75)', 'rgba(237,28,36,0.9)',
+        'rgba(0,212,170,0.75)', 'rgba(0,212,170,0.55)', 'rgba(0,212,170,0.45)',
+        'rgba(88,101,242,0.75)'
+      ],
+      borderRadius: 5,
+    }]
+  },
+  options: {
+    indexAxis: 'y',
+    responsive: true,
+    plugins: { legend: { display: false } },
+    scales: {
+      x: { grid: { color: '#2A2D3E' } },
+      y: { grid: { color: '#2A2D3E' } }
+    }
+  }
+});
+
+/* ─── Tab 切换逻辑 ─── */
+function setupTabs(tabsId) {
+  const tabs = document.getElementById(tabsId);
+  if (!tabs) return;
+  tabs.querySelectorAll('.tab').forEach(tab => {
+    tab.addEventListener('click', () => {
+      const target = tab.dataset.tab;
+      tabs.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+      tab.classList.add('active');
+      // 找相关 tab-panel（查找兄弟/父级下一个容器）
+      document.querySelectorAll('.tab-panel').forEach(p => {
+        if (p.id === 'tab-' + target) {
+          p.classList.add('active');
+        } else if (tabs.parentElement.contains(p)) {
+          p.classList.remove('active');
+        }
+      });
+    });
+  });
+}
+setupTabs('latencyTabs');
+setupTabs('detailTabs');
+
+/* ─── 导航高亮 ─── */
+const navItems = document.querySelectorAll('.nav-item');
+const observer = new IntersectionObserver(entries => {
+  entries.forEach(entry => {
+    if (entry.isIntersecting) {
+      navItems.forEach(n => n.classList.remove('active'));
+      const active = document.querySelector('.nav-item[href="#' + entry.target.id + '"]');
+      if (active) active.classList.add('active');
+    }
+  });
+}, { rootMargin: '-30% 0px -60% 0px' });
+document.querySelectorAll('.section[id]').forEach(s => observer.observe(s));
+</script>
+</body>
+</html>
