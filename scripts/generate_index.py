@@ -9,8 +9,13 @@ from datetime import datetime
 from pathlib import Path
 
 # 获取脚本所在目录的绝对路径
-SCRIPT_DIR = Path(__file__).parent.resolve()
+SCRIPT_DIR = Path(__file__).parent.resolve() if '__file__' in globals() else Path.cwd() / "scripts"
 REPO_DIR = SCRIPT_DIR.parent
+
+# 在 GitHub Actions 中，使用 GITHUB_WORKSPACE 环境变量
+if 'GITHUB_WORKSPACE' in os.environ:
+    REPO_DIR = Path(os.environ['GITHUB_WORKSPACE'])
+
 REPORTS_DIR = REPO_DIR / "reports"
 OUTPUT_INDEX = REPO_DIR / "index.html"
 TEMPLATE_FILE = REPO_DIR / "templates" / "index_template.html"
