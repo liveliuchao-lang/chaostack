@@ -1,0 +1,420 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AMD Radeon PRO W7900D 推理场景分析报告（页面直编版）</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:-apple-system,BlinkMacSystemFont,"Noto Sans SC",sans-serif;background:#0f1117;color:#e1e4ed;line-height:1.8;font-size:15px;padding:40px 24px}
+.container{max-width:960px;margin:0 auto}
+
+/* ===== 编辑模式控制栏 ===== */
+.toolbar{position:sticky;top:0;z-index:999;display:flex;align-items:center;gap:12px;padding:12px 20px;background:#1a1c2a;border:1px solid #2a2d3e;border-radius:10px;margin-bottom:30px;backdrop-filter:blur(8px)}
+.toolbar .label{font-size:13px;color:#8b8fa8}
+.switch{position:relative;display:inline-block;width:44px;height:24px;cursor:pointer}
+.switch input{opacity:0;width:0;height:0}
+.slider{position:absolute;top:0;left:0;right:0;bottom:0;background:#2a2d3e;border-radius:24px;transition:0.3s}
+.slider::before{content:"";position:absolute;height:18px;width:18px;left:3px;bottom:3px;background:#8b8fa8;border-radius:50%;transition:0.3s}
+.switch input:checked+.slider{background:#ed9b40}
+.switch input:checked+.slider::before{background:#fff;transform:translateX(20px)}
+.toolbar .status{font-size:12px;padding:3px 10px;border-radius:6px;font-weight:600}
+.toolbar .status.on{background:rgba(237,155,64,0.15);color:#ed9b40}
+.toolbar .status.off{background:rgba(139,143,168,0.15);color:#8b8fa8}
+.toolbar .hint{font-size:12px;color:#8b8fa8;margin-left:auto}
+.btn{padding:6px 14px;border-radius:6px;border:1px solid #2a2d3e;background:#1c1e2e;color:#e1e4ed;font-size:12px;cursor:pointer;transition:0.2s}
+.btn:hover{background:#2a2d3e;border-color:#ed9b40}
+.btn-save{background:rgba(74,222,128,0.12);border-color:rgba(74,222,128,0.3);color:#4ade80}
+.btn-save:hover{background:rgba(74,222,128,0.2)}
+.btn-reset{background:rgba(248,113,113,0.12);border-color:rgba(248,113,113,0.3);color:#f87171}
+.btn-reset:hover{background:rgba(248,113,113,0.2)}
+
+/* ===== 可编辑元素 ===== */
+[data-editable]{transition:outline 0.2s;border-radius:3px;padding:1px 3px;margin:-1px -3px}
+[edit-mode="on"] [data-editable]{cursor:text;outline:1px dashed transparent}
+[edit-mode="on"] [data-editable]:hover{outline-color:rgba(237,155,64,0.5);background:rgba(237,155,64,0.04)}
+[edit-mode="on"] [data-editable]:focus{outline-color:#ed9b40;background:rgba(237,155,64,0.08);box-shadow:0 0 0 2px rgba(237,155,64,0.15)}
+[edit-mode="on"] td[data-editable], [edit-mode="on"] th[data-editable]{padding:9px 13px;margin:0;border-radius:0}
+
+h2{font-size:22px;font-weight:700;padding-bottom:8px;margin:40px 0 20px;border-bottom:2px solid #ed9b40;display:inline-block}
+h3{font-size:17px;font-weight:600;margin:28px 0 12px;color:#f5b86e}
+p{margin-bottom:14px}
+ul,ol{margin:10px 0 16px 22px}
+li{margin-bottom:6px}
+strong{color:#f5b86e}
+code{background:#1c1e2e;padding:2px 6px;border-radius:4px;font-size:13px}
+
+table{width:100%;border-collapse:collapse;margin:16px 0;font-size:14px}
+th{background:#1c1e2e;text-align:left;padding:10px 14px;font-weight:600;color:#8b8fa8;font-size:12px;text-transform:uppercase;border-bottom:1px solid #2a2d3e}
+td{padding:10px 14px;border-bottom:1px solid #2a2d3e}
+tr:hover{background:rgba(255,255,255,0.02)}
+
+.tag{display:inline-block;padding:2px 10px;border-radius:6px;font-size:12px;font-weight:600}
+.g{background:rgba(74,222,128,0.12);color:#4ade80}
+.y{background:rgba(251,191,36,0.12);color:#fbbf24}
+.r{background:rgba(248,113,113,0.12);color:#f87171}
+.b{background:rgba(96,165,250,0.12);color:#60a5fa}
+.p{background:rgba(167,139,250,0.12);color:#a78bfa}
+
+.callout{padding:16px 20px;border-radius:10px;border-left:4px solid;margin:20px 0;background:#1c1e2e}
+.ca{border-color:#60a5fa}
+.cw{border-color:#fbbf24;background:rgba(251,191,36,0.04)}
+.cr{border-color:#f87171;background:rgba(248,113,113,0.04)}
+.cs{border-color:#4ade80;background:rgba(74,222,128,0.04)}
+
+.card-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(270px,1fr));gap:16px;margin:20px 0}
+.card{background:#1c1e2e;border:1px solid #2a2d3e;border-radius:10px;padding:18px}
+.card .l{font-size:12px;text-transform:uppercase;letter-spacing:0.6px;color:#8b8fa8;font-weight:600}
+.card .v{font-size:20px;font-weight:700;margin:4px 0}
+
+.footer{text-align:center;padding:40px 0 20px;border-top:1px solid #2a2d3e;color:#8b8fa8;font-size:13px;margin-top:40px}
+.footer a{color:#ed9b40}
+
+.solution-box{background:rgba(74,222,128,0.04);border:1px solid rgba(74,222,128,0.2);border-radius:8px;padding:12px 16px;margin:10px 0}
+.solution-box h4{color:#4ade80;font-size:14px;margin:0 0 6px}
+</style>
+</head>
+<body>
+<div class="container">
+
+<!-- ===== 顶部编辑控制栏 ===== -->
+<div class="toolbar">
+  <span class="label">✏️ 页面编辑</span>
+  <label class="switch">
+    <input type="checkbox" id="editToggle">
+    <span class="slider"></span>
+  </label>
+  <span id="editStatus" class="status off">只读</span>
+  <span class="hint">点击文字直接修改 · 修改后保存为本地文件</span>
+  <button class="btn btn-save" onclick="downloadHTML()">💾 导出 HTML</button>
+  <button class="btn btn-reset" onclick="resetPage()">↺ 重置</button>
+</div>
+
+<!-- ===== 标题 ===== -->
+<div style="text-align:center;padding:32px 0 40px;border-bottom:1px solid #2a2d3e;margin-bottom:40px">
+  <h1 style="font-size:28px;font-weight:700;background:linear-gradient(135deg,#ed9b40,#f5b86e);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text">
+    AMD Radeon PRO W7900D 推理场景深度分析报告
+  </h1>
+  <div style="margin-top:12px;color:#8b8fa8;font-size:14px">
+    📅 <span data-editable>2026-05-02</span> · 🔬 ROCm <span data-editable>7.2.1</span> · <span data-editable>RDNA 3</span> · <span data-editable>gfx1100</span>
+  </div>
+</div>
+
+<!-- ============================================================ -->
+<!-- 1. 硬件规格 -->
+<!-- ============================================================ -->
+<h2>1️⃣ 硬件规格概览</h2>
+<p>AMD Radeon PRO W7900D 是 W7900 系列的衍生型号，2026年1月发布。核心变化是降频（<span data-editable>2156</span> vs <span data-editable>2495</span> MHz），TDP 更低，其余规格一致。</p>
+
+<div class="card-grid">
+  <div class="card"><div class="l">架构</div><div class="v"><span data-editable>RDNA 3 (Navi 31)</span></div><div><span data-editable>5nm · 芯片组设计</span></div></div>
+  <div class="card"><div class="l">流处理器</div><div class="v"><span data-editable>6,144</span> SP</div><div>AI Accelerator: <span data-editable>192</span> 个</div></div>
+  <div class="card"><div class="l">显存</div><div class="v"><span data-editable>48</span> GB <span data-editable>GDDR6</span></div><div><span data-editable>384</span>-bit 总线 · ECC <span data-editable>✅</span></div></div>
+  <div class="card"><div class="l">显存带宽</div><div class="v"><span data-editable>864</span> GB/s</div><div>Infinity Cache <span data-editable>96</span> MB</div></div>
+  <div class="card"><div class="l">Boost 频率</div><div class="v"><span data-editable>2,156</span> MHz</div><div>原版 W7900: <span data-editable>2,495</span> MHz（低 <span data-editable>13</span>%）</div></div>
+  <div class="card"><div class="l">TDP</div><div class="v"><span data-editable>~260</span> W</div><div>2× 8-pin · 原版 <span data-editable>295</span> W</div></div>
+  <div class="card"><div class="l">ROCm 目标</div><div class="v"><span data-editable>gfx1100</span></div><div>与原版 W7900 一致</div></div>
+  <div class="card"><div class="l">FP16 算力</div><div class="v"><span data-editable>~106</span> TFLOPS</div><div>FP32（含矩阵加速）: <span data-editable>~53</span> TFLOPS</div></div>
+</div>
+
+<div class="callout ca"><strong>💡</strong> 核心竞争力：<strong><span data-editable>48GB 大显存 + 官方 ROCm 支持 (gfx1100)</span></strong>。降频后推理吞吐比原版低约 <span data-editable>10-13%</span>，但功耗更低。</div>
+
+<!-- ============================================================ -->
+<!-- 2. ROCm 生态评估 -->
+<!-- ============================================================ -->
+<h2>2️⃣ ROCm 软件生态成熟度评估</h2>
+
+<h3>2.1 版本演化</h3>
+<table>
+  <tr><th>版本</th><th>时间</th><th>W7900</th><th>关键变化</th></tr>
+  <tr><td><span data-editable>6.0~6.4</span></td><td><span data-editable>2024–2025.06</span></td><td><span class="tag g">✅</span></td><td><span data-editable>基础 HIP + PyTorch ROCm，训练可用但慢</span></td></tr>
+  <tr><td><strong><span data-editable>7.0</span></strong></td><td><span data-editable>2025.09</span></td><td><span class="tag g">✅</span></td><td><span data-editable>推理比 ROCm 6 快最多 3.8×；FP8/FP6 支持</span></td></tr>
+  <tr><td><strong><span data-editable>7.1</span></strong></td><td><span data-editable>2025.12</span></td><td><span class="tag g">✅</span></td><td><span data-editable>vLLM "一等公民"；AITER 融合内核</span></td></tr>
+  <tr><td><strong><span data-editable>7.2</span></strong></td><td><span data-editable>2026.03</span></td><td><span class="tag g">✅</span></td><td><span data-editable>RDNA4 支持；ROCm Optiq beta</span></td></tr>
+</table>
+
+<h3>2.2 成熟度评分</h3>
+<table>
+  <tr><th>维度</th><th>评分</th><th>说明</th></tr>
+  <tr><td>PyTorch / Transformers</td><td><span class="tag g"><span data-editable>8</span>/10</span></td><td><span data-editable>官方 nightly 支持，pip install 直装</span></td></tr>
+  <tr><td>vLLM 推理</td><td><span class="tag g"><span data-editable>8</span>/10</span></td><td><span data-editable>ROCm 7.1 起一等公民。pip install vllm 即可用</span></td></tr>
+  <tr><td>llama.cpp / Ollama</td><td><span class="tag y"><span data-editable>7</span>/10</span></td><td><span data-editable>HIP 后端可用，但部分场景 Vulkan 更快 20-50%</span></td></tr>
+  <tr><td>MLC-LLM (TVM)</td><td><span class="tag g"><span data-editable>8</span>/10</span></td><td><span data-editable>比 llama.cpp HIP 快 35%+。70B 首次编译需 ~40 分钟</span></td></tr>
+  <tr><td>ComfyUI / SD</td><td><span class="tag g"><span data-editable>8</span>/10</span></td><td><span data-editable>官方文档完善。SDXL/FLUX/WAN 均可用</span></td></tr>
+  <tr><td>Flash Attention</td><td><span class="tag y"><span data-editable>6</span>/10</span></td><td><span data-editable>通过 Triton 桥接，非原生 ROCm</span></td></tr>
+  <tr><td>DeepSpeed / FSDP</td><td><span class="tag y"><span data-editable>5</span>/10</span></td><td><span data-editable>RCCL 可用但不成熟。多卡训练不推荐</span></td></tr>
+  <tr><td>Windows (HIP SDK)</td><td><span class="tag y"><span data-editable>5</span>/10</span></td><td><span data-editable>ROCm 7.2 引入，但仅限 HIP SDK</span></td></tr>
+  <tr><td>HuggingFace TEI/TGI</td><td><span class="tag r"><span data-editable>3</span>/10</span></td><td><span data-editable>纯 CUDA 独占。需替代方案 (vLLM)</span></td></tr>
+  <tr><td>CUDA 迁移 (HIPIFY)</td><td><span class="tag y"><span data-editable>6</span>/10</span></td><td><span data-editable>工具可用，但 kernel 性能不如原生 CUDA</span></td></tr>
+</table>
+<div class="callout cs"><strong>📊 综合评分：<span data-editable>7.0</span>/10</strong> —— 推理场景已达生产力水平。</div>
+
+<!-- ============================================================ -->
+<!-- 3. 推理框架兼容性 -->
+<!-- ============================================================ -->
+<h2>3️⃣ 推理框架兼容性矩阵</h2>
+<table>
+  <tr><th>框架</th><th>状态</th><th>安装</th><th>性能</th><th>适用场景</th></tr>
+  <tr><td><span data-editable>vLLM</span></td><td><span class="tag g">一等公民</span></td><td><span data-editable>pip install vllm</span></td><td><span data-editable>优秀。AITER+Triton</span></td><td><span data-editable>API 服务、高并发</span></td></tr>
+  <tr><td><span data-editable>Ollama</span></td><td><span class="tag g">✅</span></td><td><span data-editable>brew install ollama</span></td><td><span data-editable>良好，开箱即用</span></td><td><span data-editable>个人开发、快速实验</span></td></tr>
+  <tr><td><span data-editable>llama.cpp</span></td><td><span class="tag g">✅ HIP</span></td><td><span data-editable>-DGGML_HIP=ON</span></td><td><span data-editable>HIP 可能慢于 Vulkan 20-50%</span></td><td><span data-editable>GGUF、边缘部署</span></td></tr>
+  <tr><td><span data-editable>MLC-LLM</span></td><td><span class="tag g">✅ ROCm</span></td><td><span data-editable>预编译包</span></td><td><span data-editable>比 HIP 快 35%</span></td><td><span data-editable>单卡最高吞吐</span></td></tr>
+  <tr><td><span data-editable>PyTorch</span></td><td><span class="tag g">✅ ROCm</span></td><td><span data-editable>pip install torch --index-url ...</span></td><td><span data-editable>优秀。HF 全家桶</span></td><td><span data-editable>微调、实验、自定义推理</span></td></tr>
+  <tr><td><span data-editable>ComfyUI</span></td><td><span class="tag g">✅</span></td><td><span data-editable>ROCm PyTorch</span></td><td><span data-editable>SDXL/FLUX 可用</span></td><td><span data-editable>图像/视频生成</span></td></tr>
+  <tr><td><span data-editable>TGI</span></td><td><span class="tag r">❌</span></td><td><span data-editable>—</span></td><td><span data-editable>纯 CUDA</span></td><td><span data-editable>替代: vLLM</span></td></tr>
+  <tr><td><span data-editable>TensorRT-LLM</span></td><td><span class="tag r">❌</span></td><td><span data-editable>—</span></td><td><span data-editable>纯 NVIDIA</span></td><td><span data-editable>替代: MLC-LLM</span></td></tr>
+</table>
+
+<!-- ============================================================ -->
+<!-- 4. 模型适配 -->
+<!-- ============================================================ -->
+<h2>4️⃣ 模型适配能力分析</h2>
+
+<h3>4.1 显存容量映射（单卡 48GB）</h3>
+<table>
+  <tr><th>模型规模</th><th>FP16</th><th>INT8/FP8</th><th>Q4</th><th>推荐</th></tr>
+  <tr><td><span data-editable>7~8B</span></td><td><span class="tag g">✅</span> <span data-editable>~14-16GB</span></td><td><span class="tag g">✅</span> <span data-editable>~8GB</span></td><td><span class="tag g">✅</span> <span data-editable>~4-5GB</span></td><td><span data-editable>同时加载 3-5 个模型</span></td></tr>
+  <tr><td><span data-editable>13~14B</span></td><td><span class="tag g">✅</span> <span data-editable>~26-28GB</span></td><td><span class="tag g">✅</span> <span data-editable>~14GB</span></td><td><span class="tag g">✅</span> <span data-editable>~8-9GB</span></td><td><span data-editable>多路并发，极高性价比</span></td></tr>
+  <tr><td><span data-editable>30~34B</span></td><td><span class="tag y">⚠️</span> <span data-editable>~60-68GB</span></td><td><span class="tag g">✅</span> <span data-editable>~30-34GB</span></td><td><span class="tag g">✅</span> <span data-editable>~18-20GB</span></td><td><span data-editable>推荐 INT8/Q8</span></td></tr>
+  <tr><td><strong><span data-editable>67~72B</span></strong></td><td><span class="tag r">❌</span></td><td><span class="tag r">❌</span></td><td><span class="tag g">✅</span> <span data-editable>~38-42GB</span></td><td><span data-editable><strong>核心卖点</strong>：单卡跑 70B Q4</span></td></tr>
+  <tr><td><span data-editable>120~130B</span></td><td><span class="tag r">❌</span></td><td><span class="tag r">❌</span></td><td><span class="tag y">⚠️</span> <span data-editable>~68-72GB</span></td><td><span data-editable>双卡 W7900D（96GB）</span></td></tr>
+  <tr><td><span data-editable>DeepSeek R1 671B</span></td><td><span class="tag r">❌</span></td><td><span class="tag r">❌</span></td><td><span class="tag y">⚠️</span> <span data-editable>~280GB</span></td><td><span data-editable>6× W7900D / CPU卸载</span></td></tr>
+</table>
+<div class="callout ca"><strong>🎯 甜蜜点：</strong>单卡 <strong><span data-editable>70B Q4_K_M (~40GB) + 8-16K 上下文</span></strong>。</div>
+
+<!-- ============================================================ -->
+<!-- 5. 最佳模型 -->
+<!-- ============================================================ -->
+<h2>5️⃣ 最佳模型应用推荐</h2>
+<table>
+  <tr><th>优先级</th><th>模型</th><th>量化</th><th>显存</th><th>速度</th><th>场景</th></tr>
+  <tr><td><span class="tag g">P0</span></td><td><span data-editable>Llama 3.3 70B Instruct</span></td><td><span data-editable>Q4_K_M</span></td><td><span data-editable>~40 GB</span></td><td><span data-editable>8-15 tok/s</span></td><td><span data-editable>通用对话、代码、RAG</span></td></tr>
+  <tr><td><span class="tag g">P0</span></td><td><span data-editable>Qwen3 72B Instruct</span></td><td><span data-editable>Q4_K_M</span></td><td><span data-editable>~42 GB</span></td><td><span data-editable>8-14 tok/s</span></td><td><span data-editable>中文、128K 长上下文</span></td></tr>
+  <tr><td><span class="tag g">P0</span></td><td><span data-editable>Qwen3-Coder 32B</span></td><td><span data-editable>Q8/INT4</span></td><td><span data-editable>~32 GB</span></td><td><span data-editable>18-30 tok/s</span></td><td><span data-editable>本地编码助手</span></td></tr>
+  <tr><td><span class="tag g">P0</span></td><td><span data-editable>Qwen3.6-35B-A3B (MoE)</span></td><td><span data-editable>INT4</span></td><td><span data-editable>~20 GB</span></td><td><span data-editable>25-40 tok/s</span></td><td><span data-editable>MoE 高性价比，3B 活跃</span></td></tr>
+  <tr><td><span class="tag b">P1</span></td><td><span data-editable>Qwen3.6-27B-VL</span></td><td><span data-editable>INT4</span></td><td><span data-editable>~16 GB</span></td><td><span data-editable>15-25 tok/s</span></td><td><span data-editable>多模态、文档理解</span></td></tr>
+  <tr><td><span class="tag b">P1</span></td><td><span data-editable>InternVL3 系列</span></td><td><span data-editable>Q4</span></td><td><span data-editable>~22 GB</span></td><td><span data-editable>12-20 tok/s</span></td><td><span data-editable>多模态问答</span></td></tr>
+  <tr><td><span class="tag b">P1</span></td><td><span data-editable>Qwen2.5-VL 72B</span></td><td><span data-editable>Q4</span></td><td><span data-editable>~44 GB</span></td><td><span data-editable>5-9 tok/s</span></td><td><span data-editable>视频理解、文档 OCR</span></td></tr>
+  <tr><td><span class="tag p">P2</span></td><td><span data-editable>BGE-M3 / jina-emb-v3</span></td><td><span data-editable>FP16</span></td><td><span data-editable>&lt;4 GB</span></td><td><span data-editable>大 batch</span></td><td><span data-editable>RAG 向量化</span></td></tr>
+  <tr><td><span class="tag p">P2</span></td><td><span data-editable>FLUX.1-dev / SD3.5</span></td><td><span data-editable>FP16</span></td><td><span data-editable>~20-30 GB</span></td><td><span data-editable>10-40s/图</span></td><td><span data-editable>高分辨率图像生成</span></td></tr>
+  <tr><td><span class="tag p">P2</span></td><td><span data-editable>WAN 2.2 视频生成</span></td><td><span data-editable>FP16</span></td><td><span data-editable>~35 GB</span></td><td><span data-editable>3-8 min/视频</span></td><td><span data-editable>AI 视频创作</span></td></tr>
+  <tr><td><span class="tag p">P2</span></td><td><span data-editable>Whisper Large-v3</span></td><td><span data-editable>FP16</span></td><td><span data-editable>&lt;4 GB</span></td><td><span data-editable>实时 5-10×</span></td><td><span data-editable>语音转文字</span></td></tr>
+</table>
+
+<!-- ============================================================ -->
+<!-- 6. 场景 -->
+<!-- ============================================================ -->
+<h2>6️⃣ 最佳场景应用推荐</h2>
+<div class="card-grid">
+  <div class="card"><div class="l" style="color:#4ade80">场景 #1</div><h3 style="margin:8px 0;font-size:15px;color:#f5b86e"><span data-editable>企业内部知识库助手</span></h3><p style="font-size:13px;color:#8b8fa8">• <span data-editable>Qwen3 72B (Q4) + Qwen3-Embedding</span><br>• <span data-editable>vLLM + LangChain</span><br>• <span data-editable>敏感数据不上云</span></p></div>
+  <div class="card"><div class="l" style="color:#4ade80">场景 #2</div><h3 style="margin:8px 0;font-size:15px;color:#f5b86e"><span data-editable>代码生成与审查助手</span></h3><p style="font-size:13px;color:#8b8fa8">• <span data-editable>Qwen3-Coder 32B / Qwen3.6-35B-A3B</span><br>• <span data-editable>Ollama/vLLM + Continue.dev</span><br>• <span data-editable>整仓上下文 + 低延迟</span></p></div>
+  <div class="card"><div class="l" style="color:#fbbf24">场景 #3</div><h3 style="margin:8px 0;font-size:15px;color:#f5b86e"><span data-editable>音视频内容生产</span></h3><p style="font-size:13px;color:#8b8fa8">• <span data-editable>Whisper + FLUX.1 / WAN 2.2</span><br>• <span data-editable>语音→字幕→创意生成</span><br>• <span data-editable>ComfyUI 批处理</span></p></div>
+  <div class="card"><div class="l" style="color:#fbbf24">场景 #4</div><h3 style="margin:8px 0;font-size:15px;color:#f5b86e"><span data-editable>多模型统一服务</span></h3><p style="font-size:13px;color:#8b8fa8">• <span data-editable>同时服务 3-4 个 7B Q4 模型</span><br>• <span data-editable>vLLM 多 LoRA 切换</span><br>• <span data-editable>客服、多语言翻译</span></p></div>
+  <div class="card"><div class="l" style="color:#a78bfa">场景 #5</div><h3 style="margin:8px 0;font-size:15px;color:#f5b86e"><span data-editable>学术 / 科研实验</span></h3><p style="font-size:13px;color:#8b8fa8">• <span data-editable>快速评测 70B 以下模型</span><br>• <span data-editable>QLoRA 微调 70B 模型</span><br>• <span data-editable>NLP 研究、模型选型验证</span></p></div>
+  <div class="card"><div class="l" style="color:#a78bfa">场景 #6</div><h3 style="margin:8px 0;font-size:15px;color:#f5b86e"><span data-editable>边缘 / 合规部署</span></h3><p style="font-size:13px;color:#8b8fa8">• <span data-editable>远程办公点、小团队独立部署</span><br>• <span data-editable>军工、金融、医疗等高合规行业</span><br>• <span data-editable>不依赖互联网的本地 AI</span></p></div>
+</div>
+
+<!-- ============================================================ -->
+<!-- 7. 性能实测 -->
+<!-- ============================================================ -->
+<h2>7️⃣ 性能实测数据汇编</h2>
+<div class="callout cw"><strong>⚠️</strong> W7900D 频率低 <span data-editable>13</span>%，实际速度可能比下表低 <span data-editable>10-15%</span>。</div>
+<table>
+  <tr><th>模型</th><th>量化</th><th>框架</th><th>Prompt</th><th>生成</th><th>备注</th></tr>
+  <tr><td><span data-editable>Llama 3.1 8B</span></td><td><span data-editable>Q4_K_M</span></td><td><span data-editable>MLC-LLM</span></td><td><span data-editable>~1,500 tok/s</span></td><td><strong><span data-editable>~90</span> tok/s</strong></td><td><span data-editable>比 HIP 快 35%</span></td></tr>
+  <tr><td><span data-editable>Llama 3.1 8B</span></td><td><span data-editable>Q4_K_M</span></td><td><span data-editable>llama.cpp HIP</span></td><td><span data-editable>~1,289 tok/s</span></td><td><strong><span data-editable>~66</span> tok/s</strong></td><td><span data-editable>llama-bench 官方</span></td></tr>
+  <tr><td><span data-editable>Llama 3.1 8B</span></td><td><span data-editable>Q4_K_M</span></td><td><span data-editable>llama.cpp Vulkan</span></td><td><span data-editable>—</span></td><td><strong><span data-editable>~91</span> tok/s</strong></td><td><span data-editable>Vulkan 快于 HIP</span></td></tr>
+  <tr><td><span data-editable>Llama 3.1 70B</span></td><td><span data-editable>Q4_K_M</span></td><td><span data-editable>vLLM / MLC</span></td><td><span data-editable>~200 tok/s</span></td><td><strong><span data-editable>~10-15</span> tok/s</strong></td><td><span data-editable>单用户交互可用</span></td></tr>
+  <tr><td><span data-editable>Qwen3 32B</span></td><td><span data-editable>Q8</span></td><td><span data-editable>vLLM ROCm</span></td><td><span data-editable>~500 tok/s</span></td><td><strong><span data-editable>~25-35</span> tok/s</strong></td><td><span data-editable>连续批处理优势</span></td></tr>
+  <tr><td><span data-editable>Qwen3 8B</span></td><td><span data-editable>INT8</span></td><td><span data-editable>vLLM</span></td><td><span data-editable>—</span></td><td><strong><span data-editable>~60-90</span> tok/s</strong></td><td><span data-editable>RX 7900 XTX 实测</span></td></tr>
+</table>
+
+<!-- ============================================================ -->
+<!-- 8. 限制 + 解决方案（重点） -->
+<!-- ============================================================ -->
+<h2>8️⃣ 已知限制、风险与解决方案</h2>
+
+<h3><span data-editable>8.1 Flash Attention 非原生</span></h3>
+<p><span data-editable>Flash Attention 通过 Triton 桥接，非原生 ROCm 内核。</span></p>
+<div class="solution-box"><h4>🛠️</h4><ul>
+  <li><span data-editable>vLLM Triton Attention 后端（VLLM_V1_USE_PREFILL_DECODE_ATTENTION=1）</span></li>
+  <li><span data-editable>回退 AITER MHA 内核（VLLM_ROCM_USE_AITER_MHA=1）</span></li>
+  <li><span data-editable>上下文控制在 32K 以内</span></li>
+</ul></div>
+
+<h3><span data-editable>8.2 HuggingFace TGI/TEI 不支持</span></h3>
+<p><span data-editable>纯 CUDA 独占，无 AMD 构建。</span></p>
+<div class="solution-box"><h4>🛠️</h4><ul>
+  <li><span data-editable>推理：替换为 vLLM</span></li>
+  <li><span data-editable>嵌入：PyTorch + AutoModel（ROCm 下 device='cuda' 自动映射）</span></li>
+  <li><span data-editable>重排序：FlagEmbedding 库</span></li>
+</ul></div>
+
+<h3><span data-editable>8.3 TensorRT-LLM 不可用</span></h3>
+<div class="solution-box"><h4>🛠️</h4><ul>
+  <li><span data-editable>MLC-LLM（TVM 编译优化，功能最接近）</span></li>
+  <li><span data-editable>vLLM V1 引擎 + full CUDA graph 模式</span></li>
+  <li><span data-editable>期望性能：NVIDIA TensorRT-LLM 的 60-80%</span></li>
+</ul></div>
+
+<h3><span data-editable>8.4 xFormers 支持滞后</span></h3>
+<div class="solution-box"><h4>🛠️</h4><ul>
+  <li><span data-editable>vLLM flash_attn 和 MLC-LLM 已覆盖大部分用例</span></li>
+  <li><span data-editable>ComfyUI: --force-fp16 --disable-xformers 使用 PyTorch SDPA</span></li>
+  <li><span data-editable>ROCm fork: pip install git+https://github.com/ROCm/xformers.git</span></li>
+</ul></div>
+
+<h3><span data-editable>8.5 DeepSpeed/FSDP 多卡训练不成熟</span></h3>
+<div class="solution-box"><h4>🛠️</h4><ul>
+  <li><span data-editable>W7900D 是推理卡，不推荐多卡训练</span></li>
+  <li><span data-editable>单卡 QLoRA 微调（48GB 可微调 70B Q4）</span></li>
+  <li><span data-editable>小模型（7-13B）单卡全参数微调</span></li>
+</ul></div>
+
+<h3><span data-editable>8.6 llama.cpp HIP 慢于 Vulkan</span></h3>
+<div class="solution-box"><h4>🛠️</h4><ul>
+  <li><span data-editable>方案A：使用 Vulkan 后端（-DGGML_VULKAN=ON）</span></li>
+  <li><span data-editable>方案B：rocWMMA 补丁（Green-Sky fork）</span></li>
+  <li><span data-editable>方案C：直接用 MLC-LLM（快 35%）</span></li>
+</ul></div>
+
+<h3><span data-editable>8.7 70B MLC-LLM 编译 40 分钟</span></h3>
+<div class="solution-box"><h4>🛠️</h4><ul>
+  <li><span data-editable>首次后缓存，后续加载秒级</span></li>
+  <li><span data-editable>频繁换模型用 vLLM（免编译）</span></li>
+  <li><span data-editable>Docker 镜像提前编译好</span></li>
+</ul></div>
+
+<h3><span data-editable>8.8 Windows 支持有限</span></h3>
+<div class="solution-box"><h4>🛠️</h4><ul>
+  <li><span data-editable>推荐 Ubuntu 24.04.4 LTS</span></li>
+  <li><span data-editable>Windows 用户用 WSL2 + Ubuntu 24.04</span></li>
+  <li><span data-editable>HIP SDK 7.2 可满足 Ollama/ComfyUI 基础需求</span></li>
+</ul></div>
+
+<h3><span data-editable>8.9 RDNA3 矩阵核心效率低于 Tensor Core</span></h3>
+<div class="solution-box"><h4>🛠️</h4><ul>
+  <li><span data-editable>Q4/INT8 量化时差距缩小到 10-20%</span></li>
+  <li><span data-editable>优先使用 FP8 精度（ROCm 7.0+）</span></li>
+  <li><span data-editable>使用 vLLM AITER 融合内核</span></li>
+</ul></div>
+
+<h3><span data-editable>8.10 无 NVLink，多卡通信受限</span></h3>
+<div class="solution-box"><h4>🛠️</h4><ul>
+  <li><span data-editable>双卡 tensor parallelism 可行（PCIe 4.0 ×16 够用）</span></li>
+  <li><span data-editable>避免 4+ 卡；超过 2 卡建议 Instinct 系列</span></li>
+  <li><span data-editable>纯推理场景通信量小，PCIe 4.0 足够</span></li>
+</ul></div>
+
+<!-- ============================================================ -->
+<!-- 9. 竞品对比 -->
+<!-- ============================================================ -->
+<h2>9️⃣ 与 NVIDIA 竞品对比</h2>
+<table>
+  <tr><th>维度</th><th>W7900D (48GB)</th><th>RTX 6000 Ada (48GB)</th><th>RTX A6000 (48GB)</th><th>RTX 4090 (24GB)</th></tr>
+  <tr><td>价格（二手）</td><td><span data-editable>~$3,000-3,500</span></td><td><span data-editable>~$6,000-7,000</span></td><td><span data-editable>~$3,500-4,500</span></td><td><span data-editable>~$1,600-1,800</span></td></tr>
+  <tr><td>显存</td><td><span data-editable>48</span> GB</td><td><span data-editable>48</span> GB</td><td><span data-editable>48</span> GB</td><td><span data-editable>24</span> GB</td></tr>
+  <tr><td>带宽</td><td><span data-editable>864</span> GB/s</td><td><span data-editable>960</span> GB/s</td><td><span data-editable>768</span> GB/s</td><td><span data-editable>1,008</span> GB/s</td></tr>
+  <tr><td>70B Q4 推理</td><td><span data-editable>10-15</span> tok/s</td><td><strong><span data-editable>20-28</span> tok/s</strong></td><td><span data-editable>15-20</span> tok/s</td><td><span class="tag r">❌</span></td></tr>
+  <tr><td>8B Q4 推理</td><td><span data-editable>66-90</span> tok/s</td><td><span data-editable>120-180</span> tok/s</td><td><span data-editable>90-130</span> tok/s</td><td><span data-editable>150-200</span> tok/s</td></tr>
+  <tr><td>SD/FLUX 生成</td><td><span data-editable>10-40s</span>/图</td><td><span data-editable>5-15s</span>/图</td><td><span data-editable>8-20s</span>/图</td><td><span data-editable>3-10s</span>/图</td></tr>
+  <tr><td>生态评分</td><td><span class="tag y"><span data-editable>7</span>/10</span></td><td><span class="tag g">10/10</span></td><td><span class="tag g">10/10</span></td><td><span class="tag g">10/10</span></td></tr>
+  <tr><td>功耗</td><td><span data-editable>~260</span> W</td><td><span data-editable>300</span> W</td><td><span data-editable>300</span> W</td><td><span data-editable>450</span> W</td></tr>
+</table>
+<div class="callout ca"><strong>💡</strong> <span data-editable>70B Q4 单卡场景性价比碾压 NVIDIA。48GB 量级竞品价格是 W7900D 的 2 倍。</span></div>
+
+<!-- ============================================================ -->
+<!-- 10. 部署建议 -->
+<!-- ============================================================ -->
+<h2>🔟 部署建议与总结</h2>
+
+<h3>10.1 推荐软件栈</h3>
+<div class="callout" style="border-color:#ed9b40">
+  <table style="margin:0">
+    <tr><td style="width:140px;border:none">操作系统</td><td style="border:none"><span data-editable>Ubuntu 24.04.4 LTS</span></td></tr>
+    <tr><td style="border:none">ROCm</td><td style="border:none"><span data-editable>7.2.1</span></td></tr>
+    <tr><td style="border:none">PyTorch</td><td style="border:none"><code style="font-size:12px">pip install torch --index-url https://download.pytorch.org/whl/rocm7.2</code></td></tr>
+    <tr><td style="border:none">推理引擎</td><td style="border:none"><span data-editable>vLLM 0.14+（生产）/ MLC-LLM（单用户高吞吐）</span></td></tr>
+    <tr><td style="border:none">快速上手</td><td style="border:none"><span data-editable>Ollama + HSA_OVERRIDE_GFX_VERSION=11.0.0</span></td></tr>
+    <tr><td style="border:none">图像生成</td><td style="border:none"><span data-editable>ComfyUI + ROCm PyTorch</span></td></tr>
+  </table>
+</div>
+
+<h3>10.2 购买决策清单</h3>
+<table>
+  <tr><th>✅ 适合购买</th><th>❌ 不适合</th></tr>
+  <tr><td><span data-editable>主要推理 70B 以下 LLM（尤其 Q4 70B）</span></td><td><span data-editable>重度依赖 Flash Attention（128K+）</span></td></tr>
+  <tr><td><span data-editable>使用 Linux（Ubuntu 22.04/24.04）</span></td><td><span data-editable>必须使用 TGI / TEI / TensorRT-LLM</span></td></tr>
+  <tr><td><span data-editable>需要多模型并发服务</span></td><td><span data-editable>需要大规模分布式训练（8+ 卡）</span></td></tr>
+  <tr><td><span data-editable>RAG + LLM 全栈单卡搞定</span></td><td><span data-editable>主要用 Windows + 需要完整 ROCm 栈</span></td></tr>
+  <tr><td><span data-editable>预算敏感，追求 48GB 最佳性价比</span></td><td><span data-editable>70B Q4 需 >25 tok/s</span></td></tr>
+  <tr><td><span data-editable>数据隐私高要求，本地部署</span></td><td><span data-editable>已有成熟 CUDA/NVIDIA 基础设施</span></td></tr>
+</table>
+
+<h3>10.3 总结评分</h3>
+<div class="card-grid">
+  <div class="card"><div class="l">硬件实力</div><div class="v" style="color:#4ade80"><span data-editable>★★★★☆☆</span></div><div style="font-size:13px;color:#8b8fa8"><span data-editable>48GB + 864 GB/s 是亮点</span></div></div>
+  <div class="card"><div class="l">生态成熟度</div><div class="v" style="color:#fbbf24"><span data-editable>★★★★☆☆</span></div><div style="font-size:13px;color:#8b8fa8"><span data-editable>推理已可用，局部短板有解</span></div></div>
+  <div class="card"><div class="l">性价比</div><div class="v" style="color:#4ade80"><span data-editable>★★★★★☆</span></div><div style="font-size:13px;color:#8b8fa8"><span data-editable>70B Q4 最佳甜蜜点</span></div></div>
+  <div class="card"><div class="l">推荐指数</div><div class="v" style="color:#4ade80"><span data-editable>★★★★☆☆</span></div><div style="font-size:13px;color:#8b8fa8"><span data-editable>特定场景强烈推荐</span></div></div>
+</div>
+
+<div class="callout cs">
+  <strong>🎯 一句话：</strong><span data-editable>AMD Radeon PRO W7900D 是一张为推理而生的大显存工作站显卡，48GB + ROCm 7.2 生态使它在单卡 70B Q4 推理（推荐 Qwen3 72B / Llama 3.3 70B）、代码模型（Qwen3-Coder 32B / Qwen3.6-35B-A3B）、VLM/图像生成本地部署等场景下具有极高性价比。</span>
+</div>
+
+<div class="footer">
+  <p>数据截止：<span data-editable>2026-05-02</span> · 基于 AMD 官方文档、ROCm 社区、Reddit r/ROCm 等公开资料</p>
+  <p>💡 使用方式：点击页面顶部的开关进入编辑模式 → 点击任何带虚线框的文字直接修改 → 点「导出 HTML」保存</p>
+</div>
+
+</div><!-- /container -->
+
+<script>
+// ===== 编辑模式切换 =====
+const toggle = document.getElementById('editToggle');
+const status = document.getElementById('editStatus');
+let originalHTML = null;
+
+toggle.addEventListener('change', function() {
+  if (this.checked) {
+    document.body.setAttribute('edit-mode', 'on');
+    status.textContent = '可编辑';
+    status.className = 'status on';
+    document.querySelectorAll('[data-editable]').forEach(el => {
+      if (!el.hasAttribute('contenteditable')) {
+        el.setAttribute('contenteditable', 'true');
+      }
+    });
+  } else {
+    document.body.setAttribute('edit-mode', 'off');
+    status.textContent = '只读';
+    status.className = 'status off';
+    document.querySelectorAll('[data-editable]').forEach(el => {
+      el.removeAttribute('contenteditable');
+    });
+  }
+});
+
+// ===== 导出 HTML =====
+function downloadHTML() {
+  const html = '<!DOCTYPE html>\n' + document.documentElement.outerHTML;
+  const blob = new Blob([html], { type: 'text/html;charset=utf-8' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `amd-w7900d-report-${new Date().toISOString().slice(0,10)}.html`;
+  a.click();
+  URL.revokeObjectURL(url);
+}
+
+// ===== 重置（保存原始 HTML 后重新加载） =====
+function resetPage() {
+  if (confirm('重置将丢弃所有未保存的修改，确认？')) {
+    location.reload();
+  }
+}
+</script>
+
+</body>
+</html>
