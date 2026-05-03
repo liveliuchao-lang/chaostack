@@ -18,6 +18,7 @@ if 'GITHUB_WORKSPACE' in os.environ:
 
 REPORTS_DIR = REPO_DIR / "reports"
 OUTPUT_INDEX = REPO_DIR / "index.html"
+REPORTS_INDEX = REPO_DIR / "reports" / "index.html"
 TEMPLATE_FILE = REPO_DIR / "templates" / "index_template.html"
 
 def log(msg):
@@ -119,6 +120,13 @@ def generate_index_html(reports):
         f.write(html)
     
     log(f"Generated {OUTPUT_INDEX} with {len(reports)} reports")
+
+    # 同时生成 reports/index.html，使目录可访问
+    reports_html = html.replace('href="reports/', 'href="./')
+    with open(REPORTS_INDEX, 'w', encoding='utf-8') as f:
+        f.write(reports_html)
+    
+    log(f"Generated {REPORTS_INDEX} with {len(reports)} reports")
 
 if __name__ == "__main__":
     log(f"Script directory: {SCRIPT_DIR}")
