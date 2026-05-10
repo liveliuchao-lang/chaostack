@@ -1,0 +1,1261 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>8卡GPU推理性能测试流程 - 可编辑版</title>
+  <style>
+    :root {
+      --ink: #0b2545;
+      --muted: #5b6472;
+      --blue: #2e74b5;
+      --line: #d8e0ea;
+      --soft: #f5f7fa;
+      --soft-blue: #e8eef5;
+      --paper: #ffffff;
+      --danger: #8a5a00;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      color: #1f2933;
+      background: #eef2f6;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Microsoft YaHei", Arial, sans-serif;
+      line-height: 1.62;
+    }
+    .topbar {
+      position: sticky;
+      top: 0;
+      z-index: 20;
+      display: flex;
+      gap: 10px;
+      align-items: center;
+      justify-content: space-between;
+      padding: 10px 18px;
+      background: rgba(255,255,255,.94);
+      border-bottom: 1px solid var(--line);
+      backdrop-filter: blur(10px);
+    }
+    .topbar strong { color: var(--ink); font-size: 15px; }
+    .actions { display: flex; gap: 8px; flex-wrap: wrap; }
+    button {
+      border: 1px solid #b9c7d6;
+      background: #fff;
+      color: var(--ink);
+      border-radius: 6px;
+      padding: 7px 10px;
+      font-size: 13px;
+      cursor: pointer;
+    }
+    button.primary { background: var(--blue); color: #fff; border-color: var(--blue); }
+    main {
+      max-width: 1080px;
+      margin: 26px auto 52px;
+      padding: 0 18px;
+    }
+    article {
+      background: var(--paper);
+      padding: 46px 56px;
+      border: 1px solid var(--line);
+      box-shadow: 0 18px 50px rgba(15, 23, 42, .08);
+    }
+    article:focus { outline: 3px solid rgba(46,116,181,.25); }
+    h1 { color: var(--ink); font-size: 30px; line-height: 1.2; margin: 0 0 14px; }
+    h2 { color: var(--blue); border-top: 1px solid var(--line); padding-top: 22px; margin-top: 32px; }
+    h3 { color: #1f4d78; margin-top: 22px; }
+    h4 { color: var(--ink); margin-bottom: 4px; }
+    p, li { font-size: 15.5px; }
+    a { color: #0f5fa8; }
+    code {
+      font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+      background: #f1f4f8;
+      border: 1px solid #e4e9f0;
+      padding: 1px 4px;
+      border-radius: 4px;
+      font-size: .92em;
+    }
+    .code-block {
+      overflow: auto;
+      padding: 14px 16px;
+      background: #0f172a;
+      color: #e5e7eb;
+      border-radius: 8px;
+      font-size: 13px;
+      line-height: 1.5;
+      white-space: pre;
+    }
+    .code-block code { background: transparent; border: 0; color: inherit; padding: 0; }
+    .table-wrap { overflow-x: auto; margin: 14px 0 20px; }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 14px;
+      background: #fff;
+    }
+    th, td {
+      border: 1px solid #cfd8e3;
+      padding: 9px 10px;
+      vertical-align: top;
+      min-width: 86px;
+    }
+    th { background: #f2f4f7; color: var(--ink); text-align: left; }
+    hr { border: 0; border-top: 1px solid var(--line); margin: 28px 0; }
+    .editable-flowchart {
+      margin: 20px 0 26px;
+      padding: 22px;
+      border: 1px solid #b9cfe8;
+      background: #f8fbff;
+      border-radius: 10px;
+    }
+    .flow-title {
+      color: var(--ink);
+      font-weight: 700;
+      font-size: 19px;
+      padding-bottom: 12px;
+      border-bottom: 3px solid var(--blue);
+      margin-bottom: 18px;
+    }
+    .flow-rail { display: grid; gap: 14px; }
+    .flow-step {
+      position: relative;
+      padding: 14px 18px;
+      background: var(--soft-blue);
+      border: 2px solid #2f78bf;
+      border-radius: 8px;
+    }
+    .flow-step:not(:last-child)::after {
+      content: "↓";
+      position: absolute;
+      left: 50%;
+      bottom: -26px;
+      transform: translateX(-50%);
+      color: #718096;
+      font-weight: 700;
+      background: #f8fbff;
+      padding: 0 6px;
+    }
+    .flow-step-title { color: #174a7c; font-weight: 700; margin-bottom: 4px; }
+    .flow-step-body { color: #27313d; }
+    .flow-note { color: var(--danger); margin: 18px 0 8px; }
+    details { margin-top: 14px; }
+    summary { cursor: pointer; color: var(--blue); font-weight: 700; }
+    .mermaid-source {
+      white-space: pre;
+      overflow: auto;
+      background: #f4f6f9;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      padding: 12px;
+      font-size: 12.5px;
+    }
+    [contenteditable="true"]:focus, article[contenteditable="true"]:focus {
+      outline: 2px solid rgba(46, 116, 181, .35);
+      outline-offset: 2px;
+      border-radius: 4px;
+    }
+    .hint {
+      max-width: 1080px;
+      margin: 18px auto 0;
+      padding: 0 18px;
+      color: var(--muted);
+      font-size: 13px;
+    }
+    @media print {
+      body { background: #fff; }
+      .topbar, .hint { display: none; }
+      main { margin: 0; max-width: none; padding: 0; }
+      article { border: 0; box-shadow: none; padding: 0; }
+      h2 { break-after: avoid; }
+      table, .flow-step { break-inside: avoid; }
+    }
+  </style>
+</head>
+<body>
+  <div class="topbar">
+    <strong>可编辑 HTML：8卡 GPU 推理性能测试流程</strong>
+    <div class="actions">
+      <button class="primary" onclick="downloadHtml()">保存为 HTML</button>
+      <button onclick="exportText()">导出纯文本/Markdown草稿</button>
+      <button onclick="window.print()">打印 / 另存 PDF</button>
+      <button onclick="clearDraft()">清除浏览器草稿</button>
+    </div>
+  </div>
+  <div class="hint">提示：正文、表格单元格、代码块、流程图卡片均可直接点击编辑。页面会自动保存草稿到当前浏览器。</div>
+  <main>
+    <article id="doc" contenteditable="true" spellcheck="false">
+<h1>8 卡 GPU 服务器模型推理性能测试流程</h1>
+<p><strong>主题：通用推理框架 + AMD Radeon Pro / Radeon AI PRO + ROCm 生态专项修订版</strong></p>
+<p><strong>版本：v1.0</strong></p>
+<p><strong>日期：2026-05-10</strong></p>
+<p><strong>适用对象：AI 平台、基础设施、模型服务、性能测试与交付团队</strong></p>
+<hr>
+<h2>1. 文档目标</h2>
+<p>本文档用于指导在单机 8 卡 GPU 服务器上，对不同推理框架开展大模型推理性能测试。文档在通用 8 卡 GPU 测试方法基础上，重点补充 <strong>AMD Radeon Pro / Radeon AI PRO GPU 结合 ROCm 生态</strong> 的准入检查、框架选择、监控工具、性能测试口径和交付要求。</p>
+<p>最终目标是形成一套可复现、可审计、可交付的测试流程，用于回答以下问题：</p>
+<ol>
+<li>在同一模型、同一精度、同一输入/输出长度下，不同推理框架的吞吐、延迟和稳定性表现如何。</li>
+<li>在满足业务 SLA 的前提下，各框架可承载的最大 RPS/QPS 或 token 吞吐是多少。</li>
+<li>8 卡扩展效率是否合理，瓶颈来自计算、显存、PCIe/NUMA、RCCL 通信、框架调度还是模型本身。</li>
+<li>AMD Radeon Pro / Radeon AI PRO + ROCm 组合是否具备生产可用性，哪些场景适合生产，哪些场景只能作为兼容性或实验性验证。</li>
+</ol>
+<hr>
+<h2>2. 适用范围与边界</h2>
+<h3>2.1 适用范围</h3>
+<ul>
+<li>单机 8 卡 GPU 推理服务器。</li>
+<li>AMD Radeon Pro / Radeon AI PRO GPU，运行 ROCm 生态。</li>
+<li>对比 vLLM、SGLang、llama.cpp/HIP、TGI、ONNX Runtime/MIGraphX 等框架。</li>
+<li>大语言模型、代码模型、多模态模型中的文本生成链路。</li>
+<li>离线吞吐测试、在线服务压测、长上下文测试、量化测试、多卡扩展测试、稳定性长跑测试。</li>
+</ul>
+<h3>2.2 不适用或需单独说明的范围</h3>
+<ul>
+<li>不将 AMD Radeon Pro 结果与 NVIDIA TensorRT-LLM 结果直接作为同生态公平排名。</li>
+<li>不将 AMD Instinct MI300X/MI325X 的最佳实践直接套用到 Radeon Pro 多卡服务器。</li>
+<li>不将不同精度、不同量化、不同上下文长度、不同并行策略的结果混合排名。</li>
+<li>不用单次峰值结果替代可复现结果；所有关键结论必须至少三次复测。</li>
+</ul>
+<hr>
+<h2>3. 关键结论与推荐框架</h2>
+<p>在 AMD Radeon Pro / Radeon AI PRO + ROCm 场景下，建议将测试框架分为三类：</p>
+<div class="table-wrap"><table>
+<thead><tr>
+<th>类别</th>
+<th>框架</th>
+<th>推荐定位</th>
+<th>说明</th>
+</tr></thead><tbody>
+<tr>
+<td>主测框架</td>
+<td>vLLM ROCm</td>
+<td>生产候选</td>
+<td>适合作为 OpenAI-compatible serving 主基线，重点测试吞吐、延迟、长上下文和多卡扩展</td>
+</tr>
+<tr>
+<td>主测框架</td>
+<td>SGLang ROCm</td>
+<td>生产候选</td>
+<td>适合高吞吐 serving、结构化输出、复杂调度、MoE 或长上下文场景</td>
+</tr>
+<tr>
+<td>专项框架</td>
+<td>llama.cpp HIP/ROCm</td>
+<td>量化与轻量服务专项</td>
+<td>适合 GGUF、INT4/INT8、本地推理和边界显存测试</td>
+</tr>
+<tr>
+<td>兼容性框架</td>
+<td>TGI ROCm</td>
+<td>兼容性验证</td>
+<td>Hugging Face 官方 ROCm 测试主要集中在 Instinct 系列，Radeon Pro 上需标明支持边界</td>
+</tr>
+<tr>
+<td>专项框架</td>
+<td>ONNX Runtime + MIGraphX</td>
+<td>非 LLM 或图优化专项</td>
+<td>适合 encoder、embedding、CV、固定图推理，不与 LLM serving 直接混排</td>
+</tr>
+<tr>
+<td>非主测</td>
+<td>TensorRT-LLM</td>
+<td>NVIDIA 专项</td>
+<td>适合 NVIDIA GPU，不作为 AMD ROCm 主测框架</td>
+</tr>
+</tbody></table></div>
+<hr>
+<h2>4. 测试指标标准</h2>
+<h3>4.1 服务侧指标</h3>
+<div class="table-wrap"><table>
+<thead><tr>
+<th>指标</th>
+<th>定义</th>
+<th>用途</th>
+</tr></thead><tbody>
+<tr>
+<td>TTFT</td>
+<td>Time To First Token，首 token 延迟</td>
+<td>衡量 prefill、排队和调度效率</td>
+</tr>
+<tr>
+<td>ITL</td>
+<td>Inter Token Latency，token 间延迟</td>
+<td>衡量 decode 阶段平稳性</td>
+</tr>
+<tr>
+<td>TPOT</td>
+<td>Time Per Output Token，每输出 token 时间</td>
+<td>与 ITL 类似，便于跨工具对齐</td>
+</tr>
+<tr>
+<td>E2E latency</td>
+<td>请求端到端完成耗时</td>
+<td>用户体感延迟</td>
+</tr>
+<tr>
+<td>Output tokens/s</td>
+<td>输出 token 吞吐</td>
+<td>生成服务核心吞吐指标</td>
+</tr>
+<tr>
+<td>Total tokens/s</td>
+<td>输入 + 输出 token 总吞吐</td>
+<td>衡量整体计算负载</td>
+</tr>
+<tr>
+<td>RPS/QPS</td>
+<td>每秒请求数</td>
+<td>容量规划指标</td>
+</tr>
+<tr>
+<td>Goodput</td>
+<td>满足 SLA 的有效吞吐</td>
+<td>生产容量决策指标</td>
+</tr>
+<tr>
+<td>Error rate</td>
+<td>失败、超时、OOM、HTTP 5xx 比例</td>
+<td>稳定性指标</td>
+</tr>
+</tbody></table></div>
+<h3>4.2 分位数要求</h3>
+<p>所有在线服务测试必须输出：</p>
+<ul>
+<li>P50 latency</li>
+<li>P90 latency</li>
+<li>P95 latency</li>
+<li>P99 latency</li>
+<li>平均值、最大值、标准差</li>
+</ul>
+<h3>4.3 AMD ROCm 硬件指标</h3>
+<div class="table-wrap"><table>
+<thead><tr>
+<th>指标</th>
+<th>工具</th>
+<th>说明</th>
+</tr></thead><tbody>
+<tr>
+<td>GPU 利用率</td>
+<td><code>amd-smi</code></td>
+<td>计算资源使用情况</td>
+</tr>
+<tr>
+<td>显存使用</td>
+<td><code>amd-smi</code></td>
+<td>模型权重、KV cache、runtime buffer</td>
+</tr>
+<tr>
+<td>功耗</td>
+<td><code>amd-smi</code></td>
+<td>判断是否触发功耗墙</td>
+</tr>
+<tr>
+<td>温度</td>
+<td><code>amd-smi</code></td>
+<td>判断是否触发热降频</td>
+</tr>
+<tr>
+<td>GPU 频率</td>
+<td><code>amd-smi</code></td>
+<td>判断 clock 是否稳定</td>
+</tr>
+<tr>
+<td>PCIe 拓扑</td>
+<td><code>amd-smi topology</code></td>
+<td>判断多卡通信路径</td>
+</tr>
+<tr>
+<td>ROCm agent</td>
+<td><code>rocminfo</code></td>
+<td>确认 GPU <code>gfx</code> target 与 ROCm 可见性</td>
+</tr>
+<tr>
+<td>RCCL 通信</td>
+<td>RCCL tests</td>
+<td>验证 all-reduce/all-gather 性能</td>
+</tr>
+<tr>
+<td>Kernel profile</td>
+<td><code>rocprof</code> / ROCProfiler</td>
+<td>分析 HIP kernel、memory copy、attention/GEMM 瓶颈</td>
+</tr>
+</tbody></table></div>
+<hr>
+<h2>5. 测试矩阵设计</h2>
+<h3>5.1 模型矩阵</h3>
+<div class="table-wrap"><table>
+<thead><tr>
+<th>模型级别</th>
+<th>建议模型</th>
+<th>测试目的</th>
+</tr></thead><tbody>
+<tr>
+<td>小模型</td>
+<td>7B/8B</td>
+<td>单卡基线、框架开销、多并发调度</td>
+</tr>
+<tr>
+<td>中模型</td>
+<td>14B/32B</td>
+<td>典型生产服务负载</td>
+</tr>
+<tr>
+<td>大模型</td>
+<td>70B 或更大</td>
+<td>8 卡 TP、显存与通信压力</td>
+</tr>
+<tr>
+<td>专项模型</td>
+<td>代码模型、Embedding、多模态模型</td>
+<td>业务专项验证</td>
+</tr>
+</tbody></table></div>
+<p>所有模型必须记录：</p>
+<ul>
+<li>模型名称。</li>
+<li>checkpoint commit 或 hash。</li>
+<li>tokenizer 版本。</li>
+<li>权重格式。</li>
+<li>上下文长度。</li>
+<li>许可证与可用性约束。</li>
+</ul>
+<h3>5.2 精度与量化矩阵</h3>
+<div class="table-wrap"><table>
+<thead><tr>
+<th>精度/量化</th>
+<th>测试原则</th>
+</tr></thead><tbody>
+<tr>
+<td>BF16 / FP16</td>
+<td>主测试基线</td>
+</tr>
+<tr>
+<td>FP8</td>
+<td>仅与 FP8 结果横向比较，需记录 backend 与校准方式</td>
+</tr>
+<tr>
+<td>INT8</td>
+<td>单独分组，需记录量化方法</td>
+</tr>
+<tr>
+<td>INT4 / AWQ / GPTQ / GGUF</td>
+<td>单独分组，主要用于显存与吞吐收益分析</td>
+</tr>
+</tbody></table></div>
+<p>禁止将 BF16、FP8、INT8、INT4 结果混合排名。</p>
+<h3>5.3 长度矩阵</h3>
+<div class="table-wrap"><table>
+<thead><tr>
+<th>场景</th>
+<th>输入 token</th>
+<th>输出 token</th>
+<th>用途</th>
+</tr></thead><tbody>
+<tr>
+<td>短问答</td>
+<td>128</td>
+<td>128</td>
+<td>常规聊天与路由测试</td>
+</tr>
+<tr>
+<td>标准聊天</td>
+<td>512</td>
+<td>128</td>
+<td>通用在线服务基线</td>
+</tr>
+<tr>
+<td>文档摘要</td>
+<td>2048</td>
+<td>256</td>
+<td>Prefill 压力测试</td>
+</tr>
+<tr>
+<td>长文生成</td>
+<td>4096</td>
+<td>512</td>
+<td>KV cache 与 decode 压力测试</td>
+</tr>
+<tr>
+<td>长上下文</td>
+<td>8192+</td>
+<td>512</td>
+<td>显存、attention、调度极限测试</td>
+</tr>
+</tbody></table></div>
+<h3>5.4 多卡并行矩阵</h3>
+<div class="table-wrap"><table>
+<thead><tr>
+<th>配置</th>
+<th>用途</th>
+</tr></thead><tbody>
+<tr>
+<td>TP=1</td>
+<td>单卡基线</td>
+</tr>
+<tr>
+<td>TP=2</td>
+<td>低通信压力扩展</td>
+</tr>
+<tr>
+<td>TP=4</td>
+<td>中等通信压力扩展</td>
+</tr>
+<tr>
+<td>TP=8</td>
+<td>8 卡满配扩展</td>
+</tr>
+<tr>
+<td>TP+PP</td>
+<td>大模型或显存不足时使用</td>
+</tr>
+</tbody></table></div>
+<p>扩展效率计算公式：</p>
+<pre class="code-block" contenteditable="true"><code>扩展效率 = TP=N 吞吐 / (TP=1 吞吐 × N)</code></pre>
+<p>对于 Radeon Pro 多卡服务器，若 TP=8 吞吐低于 TP=4，必须重点排查 PCIe、NUMA、RCCL、框架调度和 batch 配置。</p>
+<hr>
+<h2>6. 测试前准备</h2>
+<h3>6.1 硬件信息采集</h3>
+<p>执行以下命令并保存输出：</p>
+<pre class="code-block" contenteditable="true"><code>amd-smi list
+amd-smi static --gpu all
+amd-smi topology
+rocminfo
+lscpu
+free -h
+lsblk</code></pre>
+<p>应记录：</p>
+<ul>
+<li>GPU 型号、数量、显存容量。</li>
+<li>GPU <code>gfx</code> target。</li>
+<li>PCIe 版本、lane 数、拓扑。</li>
+<li>CPU 型号、NUMA 节点。</li>
+<li>内存容量与频率。</li>
+<li>磁盘类型与模型加载路径。</li>
+<li>电源、散热和机箱形态。</li>
+</ul>
+<h3>6.2 ROCm 兼容性准入</h3>
+<p>必须先确认以下组合是否被官方支持或可接受为实验验证：</p>
+<ul>
+<li>GPU 型号。</li>
+<li>ROCm 版本。</li>
+<li>Linux 发行版与 kernel。</li>
+<li>PyTorch ROCm 版本。</li>
+<li>推理框架 ROCm 支持版本。</li>
+<li>容器 runtime 与 <code>/dev/kfd</code>、<code>/dev/dri</code> 权限。</li>
+</ul>
+<p>Radeon Pro 不是 Instinct 数据中心 GPU，必须显式标明支持边界。不能默认 MI300X 的测试结论适用于 Radeon Pro。</p>
+<h3>6.3 软件环境固化</h3>
+<p>必须记录：</p>
+<pre class="code-block" contenteditable="true"><code>python -V
+pip freeze
+docker image inspect &lt;image&gt;
+rocminfo
+amd-smi version</code></pre>
+<p>每个框架建议使用独立容器或独立虚拟环境。报告中必须记录：</p>
+<ul>
+<li>镜像名称与 digest。</li>
+<li>框架版本与 git commit。</li>
+<li>ROCm、HIP、RCCL、hipBLASLt、Composable Kernel、Triton 版本。</li>
+<li>Python、PyTorch、Transformers、tokenizer 版本。</li>
+<li>关键环境变量。</li>
+</ul>
+<h3>6.4 容器权限检查</h3>
+<p>ROCm 容器通常需要：</p>
+<pre class="code-block" contenteditable="true"><code>--device=/dev/kfd \
+--device=/dev/dri \
+--group-add video \
+--ipc=host \
+--network=host</code></pre>
+<p>若容器中无法看到 GPU，应优先排查 device 映射、用户组权限、ROCm runtime、IOMMU、kernel module。</p>
+<hr>
+<h2>7. 监控与日志方案</h2>
+<h3>7.1 基础监控</h3>
+<p>建议采集：</p>
+<pre class="code-block" contenteditable="true"><code>amd-smi monitor --gpu all</code></pre>
+<p>如版本支持，也可导出 CSV/JSON，用于后续和压测结果对齐。</p>
+<p>除 GPU 指标外，必须同步采集整机资源负载。推荐采集周期为 1 秒，所有监控数据必须带时间戳，便于与 benchmark 请求日志对齐。</p>
+<div class="table-wrap"><table>
+<thead><tr>
+<th>资源</th>
+<th>推荐工具</th>
+<th>必采指标</th>
+</tr></thead><tbody>
+<tr>
+<td>CPU</td>
+<td><code>mpstat</code>、<code>pidstat</code>、<code>top</code>、<code>perf stat</code> 可选</td>
+<td>user/system/iowait/softirq、CPU 利用率、上下文切换、运行队列、推理服务进程 CPU</td>
+</tr>
+<tr>
+<td>内存</td>
+<td><code>free</code>、<code>vmstat</code>、<code>pidstat -r</code></td>
+<td>used/free/cache、swap、major/minor page fault、服务进程 RSS/VMS</td>
+</tr>
+<tr>
+<td>磁盘 I/O</td>
+<td><code>iostat -xz</code>、<code>pidstat -d</code></td>
+<td>await、util、read/write MB/s、模型加载阶段 I/O 峰值</td>
+</tr>
+<tr>
+<td>网络</td>
+<td><code>sar -n DEV,TCP</code>、<code>ss</code></td>
+<td>RX/TX、TCP retransmit、连接数、accept/backlog 异常</td>
+</tr>
+<tr>
+<td>系统调度</td>
+<td><code>vmstat</code>、<code>pidstat -w</code></td>
+<td>runnable queue、blocked process、context switch、CPU 迁移</td>
+</tr>
+<tr>
+<td>GPU</td>
+<td><code>amd-smi</code>、<code>rocprof</code></td>
+<td>GPU util、VRAM、功耗、温度、频率、PCIe、kernel profile</td>
+</tr>
+</tbody></table></div>
+<p>推荐后台采集命令示例：</p>
+<pre class="code-block" contenteditable="true"><code>mkdir -p logs/system
+mpstat -P ALL 1 &gt; logs/system/mpstat.log
+vmstat 1 &gt; logs/system/vmstat.log
+iostat -xz 1 &gt; logs/system/iostat.log
+pidstat -urdw -p &lt;SERVER_PID&gt; 1 &gt; logs/system/pidstat_server.log
+amd-smi monitor --gpu all &gt; logs/system/amd_smi_monitor.log</code></pre>
+<p>若使用 Prometheus/Grafana，建议同时部署 node_exporter、process_exporter 与 ROCm/AMD GPU exporter，并确保压测客户端、服务端、监控系统时间同步。</p>
+<h3>7.2 Profiling</h3>
+<p>当出现吞吐异常、TP=8 扩展效率差、TTFT 偏高或 ITL 抖动时，使用：</p>
+<pre class="code-block" contenteditable="true"><code>rocprof &lt;command&gt;</code></pre>
+<p>重点分析：</p>
+<ul>
+<li>HIP kernel 时间分布。</li>
+<li>memory copy 开销。</li>
+<li>attention kernel。</li>
+<li>GEMM kernel。</li>
+<li>CPU 调度等待。</li>
+<li>RCCL collective 通信耗时。</li>
+</ul>
+<h3>7.3 服务日志</h3>
+<p>每轮测试必须保存：</p>
+<ul>
+<li>服务启动日志。</li>
+<li>benchmark 客户端日志。</li>
+<li>框架内部 warning/error。</li>
+<li>OOM、timeout、HTTP 5xx。</li>
+<li>ROCm/HIP/RCCL error。</li>
+</ul>
+<hr>
+<h2>8. 推理框架启动规范</h2>
+<h3>8.1 vLLM ROCm</h3>
+<pre class="code-block" contenteditable="true"><code>vllm serve $MODEL \
+  --tensor-parallel-size 8 \
+  --dtype bfloat16 \
+  --max-model-len 8192 \
+  --host 0.0.0.0 \
+  --port 8000</code></pre>
+<p>需记录：</p>
+<ul>
+<li><code>--tensor-parallel-size</code></li>
+<li><code>--dtype</code></li>
+<li><code>--max-model-len</code></li>
+<li>GPU memory utilization</li>
+<li>max batched tokens</li>
+<li>max number of sequences</li>
+<li>attention backend</li>
+</ul>
+<h3>8.2 SGLang ROCm</h3>
+<pre class="code-block" contenteditable="true"><code>python3 -m sglang.launch_server \
+  --model-path $MODEL \
+  --tp 8 \
+  --dtype bfloat16 \
+  --host 0.0.0.0 \
+  --port 30000</code></pre>
+<p>需记录：</p>
+<ul>
+<li>TP 配置。</li>
+<li>dtype。</li>
+<li>attention backend。</li>
+<li>scheduler 参数。</li>
+<li>chunked prefill 或 cache 相关参数。</li>
+</ul>
+<h3>8.3 llama.cpp HIP/ROCm</h3>
+<pre class="code-block" contenteditable="true"><code>./llama-server \
+  -m $MODEL_GGUF \
+  -ngl 999 \
+  --host 0.0.0.0 \
+  --port 8080</code></pre>
+<p>适合测试：</p>
+<ul>
+<li>GGUF 模型。</li>
+<li>INT4/INT5/INT8 量化。</li>
+<li>低显存部署。</li>
+<li>单卡或轻量多卡分层卸载。</li>
+</ul>
+<h3>8.4 TGI ROCm</h3>
+<pre class="code-block" contenteditable="true"><code>docker run --rm -it \
+  --device=/dev/kfd \
+  --device=/dev/dri \
+  --group-add video \
+  --ipc=host \
+  --network=host \
+  ghcr.io/huggingface/text-generation-inference:&lt;rocm-tag&gt; \
+  --model-id $MODEL</code></pre>
+<p>TGI 在 Radeon Pro 上建议作为兼容性测试项。若不稳定，应在报告中标注为不参与生产排名。</p>
+<hr>
+<h2>9. 标准测试流程</h2>
+<h3>9.1 流程总览</h3>
+
+    <section class="editable-flowchart" aria-label="可编辑测试流程图">
+      <div class="flow-title" contenteditable="true">8卡 AMD Radeon Pro / Radeon AI PRO + ROCm 推理性能测试流程（0到满载）</div>
+      <div class="flow-rail">
+        
+            <div class="flow-step">
+              <div class="flow-step-title" contenteditable="true">1 准入检查</div>
+              <div class="flow-step-body" contenteditable="true">确认 GPU 型号、ROCm 版本、OS/kernel、gfx target 与框架支持边界</div>
+            </div>
+            
+            <div class="flow-step">
+              <div class="flow-step-title" contenteditable="true">2 环境固化</div>
+              <div class="flow-step-body" contenteditable="true">冻结驱动、ROCm、PyTorch、框架镜像、模型 checkpoint 与 tokenizer</div>
+            </div>
+            
+            <div class="flow-step">
+              <div class="flow-step-title" contenteditable="true">3 ROCm 验证</div>
+              <div class="flow-step-body" contenteditable="true">rocminfo / amd-smi / torch HIP；确认 8 卡可见、状态正常</div>
+            </div>
+            
+            <div class="flow-step">
+              <div class="flow-step-title" contenteditable="true">4 拓扑与通信</div>
+              <div class="flow-step-body" contenteditable="true">采集 PCIe/NUMA 拓扑，运行 RCCL 测试，识别多卡通信瓶颈</div>
+            </div>
+            
+            <div class="flow-step">
+              <div class="flow-step-title" contenteditable="true">5 数据与监控</div>
+              <div class="flow-step-body" contenteditable="true">固定数据集；启动 GPU、CPU、内存、I/O、网络、服务日志同步采集</div>
+            </div>
+            
+            <div class="flow-step">
+              <div class="flow-step-title" contenteditable="true">6 框架启动</div>
+              <div class="flow-step-body" contenteditable="true">vLLM、SGLang、llama.cpp/HIP、TGI 可选；健康检查与单请求验证</div>
+            </div>
+            
+            <div class="flow-step">
+              <div class="flow-step-title" contenteditable="true">7 0负载基线</div>
+              <div class="flow-step-body" contenteditable="true">空载5-10分钟，记录后台噪声、CPU idle、内存常驻、GPU温度/频率</div>
+            </div>
+            
+            <div class="flow-step">
+              <div class="flow-step-title" contenteditable="true">8 阶梯升载</div>
+              <div class="flow-step-body" contenteditable="true">10%→25%→50%→75%→90%→100%；每阶段观测延迟、吞吐和资源</div>
+            </div>
+            
+            <div class="flow-step">
+              <div class="flow-step-title" contenteditable="true">9 满载确认</div>
+              <div class="flow-step-body" contenteditable="true">定位最大 Goodput、饱和资源、队列堆积、P99拐点和错误率边界</div>
+            </div>
+            
+            <div class="flow-step">
+              <div class="flow-step-title" contenteditable="true">10 可选过载</div>
+              <div class="flow-step-body" contenteditable="true">110%-120% 验证限流、超时、错误恢复和服务退化是否可控</div>
+            </div>
+            
+            <div class="flow-step">
+              <div class="flow-step-title" contenteditable="true">11 专项复测</div>
+              <div class="flow-step-body" contenteditable="true">TP=1/2/4/8、长上下文、显存边界、量化分组重复0到满载流程</div>
+            </div>
+            
+            <div class="flow-step">
+              <div class="flow-step-title" contenteditable="true">12 稳定性长跑</div>
+              <div class="flow-step-body" contenteditable="true">选择Goodput点运行2-24小时，观测P99漂移、RSS增长、温度和频率</div>
+            </div>
+            
+            <div class="flow-step">
+              <div class="flow-step-title" contenteditable="true">13 结论交付</div>
+              <div class="flow-step-body" contenteditable="true">输出阶段曲线、CPU/内存/GPU证据链、容量估算、推荐配置和风险清单</div>
+            </div>
+            
+      </div>
+      <p class="flow-note" contenteditable="true">注：若准入失败，只输出兼容性结论；若满载阶段未满足 SLA，以最大 Goodput 点作为容量结论。</p>
+      <details>
+        <summary>Mermaid 源码（可编辑）</summary>
+        <pre class="mermaid-source" contenteditable="true">flowchart TD
+    A[&quot;开始：明确模型、业务SLA、GPU型号&quot;] --&gt; B[&quot;查ROCm兼容矩阵：GPU/OS/kernel/ROCm/gfx target&quot;]
+    B --&gt; C{&quot;是否官方支持或可接受实验支持？&quot;}
+    C -- 否 --&gt; C1[&quot;更换ROCm版本/OS/框架或降级为兼容性验证&quot;] --&gt; B
+    C -- 是 --&gt; D[&quot;冻结测试矩阵：框架/模型/精度/TP/负载&quot;]
+    D --&gt; E[&quot;安装并冻结ROCm、驱动、PyTorch、框架镜像&quot;]
+    E --&gt; F[&quot;验证ROCm：rocminfo / amd-smi / torch HIP&quot;]
+    F --&gt; G{&quot;8卡是否全部可见且状态正常？&quot;}
+    G -- 否 --&gt; G1[&quot;修复权限、驱动、IOMMU、容器device映射&quot;] --&gt; F
+    G -- 是 --&gt; H[&quot;采集拓扑：PCIe/NUMA/RCCL/amd-smi topology&quot;]
+    H --&gt; I[&quot;准备统一数据集：短上下文/长上下文/真实业务分布&quot;]
+    I --&gt; J[&quot;启动监控：amd-smi + CPU/内存/I/O/网络 + 服务日志&quot;]
+    J --&gt; K[&quot;按框架启动：vLLM / SGLang / llama.cpp / TGI可选&quot;]
+    K --&gt; L{&quot;健康检查与单请求输出是否正常？&quot;}
+    L -- 否 --&gt; L1[&quot;调整dtype、量化、max_len、TP、ROCm环境变量&quot;] --&gt; K
+    L -- 是 --&gt; M[&quot;Warmup：GEMM/attention/kernel cache/服务队列预热&quot;]
+    M --&gt; N[&quot;0负载基线：空载5-10分钟，记录CPU/内存/GPU/温度/频率&quot;]
+    N --&gt; O[&quot;单请求基线：并发1，测TTFT/ITL/E2E与服务进程资源&quot;]
+    O --&gt; P[&quot;阶梯升载：10%→25%→50%→75%→90%→100%目标负载&quot;]
+    P --&gt; Q{&quot;当前阶段是否满足SLA且资源稳定？&quot;}
+    Q -- 是 --&gt; Q1[&quot;进入下一负载阶段，继续同步采集系统与GPU指标&quot;] --&gt; P
+    Q -- 否 --&gt; Q2[&quot;记录拐点：CPU/内存/I/O/网络/GPU/队列/错误率瓶颈&quot;]
+    Q2 --&gt; R[&quot;满载确认：定位最大Goodput与饱和资源&quot;]
+    R --&gt; S[&quot;过载保护测试：可选110%-120%，验证退化和限流行为&quot;]
+    S --&gt; T[&quot;多卡扩展：TP=1/2/4/8，重复0到满载阶梯流程&quot;]
+    T --&gt; U[&quot;长上下文与显存边界测试：KV cache/OOM/退化点&quot;]
+    U --&gt; V[&quot;量化专项：FP8/INT8/INT4/GGUF按类型分组测试&quot;]
+    V --&gt; W[&quot;稳定性长跑：2-24小时，选择Goodput点并持续观测&quot;]
+    W --&gt; X[&quot;汇总结果：延迟分位、吞吐、CPU/内存/GPU、PCIe/RCCL瓶颈&quot;]
+    X --&gt; Y{&quot;结果是否满足SLA与重复性？&quot;}
+    Y -- 否 --&gt; Y1[&quot;复测并标记瓶颈：ROCm/框架/PCIe/NUMA/CPU/内存/散热&quot;] --&gt; P
+    Y -- 是 --&gt; Z[&quot;生成报告：推荐框架、最佳配置、容量估算、风险清单&quot;]</pre>
+      </details>
+    </section>
+    
+<h3>9.2 准入检查</h3>
+<p>准入检查必须在任何性能测试前完成。若准入失败，不允许输出性能排名，只能输出兼容性结论。</p>
+<p>检查项：</p>
+<ol>
+<li>ROCm 可识别全部 8 张 GPU。</li>
+<li>PyTorch HIP 可识别全部 8 张 GPU。</li>
+<li><code>amd-smi</code> 无异常状态。</li>
+<li><code>rocminfo</code> 中 <code>gfx</code> target 与预期一致。</li>
+<li>容器内外 GPU 可见性一致。</li>
+<li>RCCL 多卡通信正常。</li>
+</ol>
+<h3>9.3 Warmup</h3>
+<p>每个测试点必须预热：</p>
+<ul>
+<li>至少 3-5 分钟，或不少于 200-500 个请求。</li>
+<li>预热期间不计入正式结果。</li>
+<li>预热后检查 GPU 温度、显存和 clock 是否进入稳定区间。</li>
+</ul>
+<h3>9.4 单请求功能测试</h3>
+<p>并发数为 1，验证：</p>
+<ul>
+<li>模型可正常生成。</li>
+<li>输出 token 数符合设置。</li>
+<li>TTFT、E2E latency 无明显异常。</li>
+<li>服务无 error、timeout、OOM。</li>
+</ul>
+<h3>9.5 Offline 极限吞吐测试</h3>
+<p>目标是测理论最大 token/s。请求尽快灌入，不模拟真实到达间隔。该场景用于评估框架和硬件的上限，不直接代表生产容量。</p>
+<p>必须记录：</p>
+<ul>
+<li>总请求数。</li>
+<li>总输入 token。</li>
+<li>总输出 token。</li>
+<li>总耗时。</li>
+<li>output tokens/s。</li>
+<li>total tokens/s。</li>
+<li>GPU 利用率与显存峰值。</li>
+</ul>
+<h3>9.6 Server 模式压测</h3>
+<p>使用固定 RPS 或 Poisson 到达。RPS 从低到高阶梯增长，直到：</p>
+<ul>
+<li>P99 latency 超过 SLA。</li>
+<li>error rate 超过阈值。</li>
+<li>服务 OOM。</li>
+<li>GPU 发生降频、温度异常或功耗限制。</li>
+<li>队列持续堆积。</li>
+</ul>
+<p>最终输出满足 SLA 的最大 Goodput。</p>
+<h3>9.7 0 到满载阶梯压测</h3>
+<p>0 到满载阶梯压测是标准流程中的核心测试。该测试用于识别不同负载阶段下，推理服务从空载、轻载、中载、高载、满载到可选过载的资源变化和性能拐点。每个框架、每个模型、每个 TP 配置都应执行该流程。</p>
+<h4>9.7.1 负载阶段定义</h4>
+<div class="table-wrap"><table>
+<thead><tr>
+<th>阶段</th>
+<th>目标负载</th>
+<th>建议持续时间</th>
+<th>观测重点</th>
+<th>阶段输出</th>
+</tr></thead><tbody>
+<tr>
+<td>L0 空载基线</td>
+<td>0%</td>
+<td>5-10 分钟</td>
+<td>CPU idle、内存常驻、GPU 温度/频率、后台噪声</td>
+<td>空载资源基线</td>
+</tr>
+<tr>
+<td>L1 冒烟负载</td>
+<td>1 个请求或并发 1</td>
+<td>3-5 分钟</td>
+<td>单请求 TTFT/E2E、服务进程 CPU、模型加载后显存</td>
+<td>功能与低负载基线</td>
+</tr>
+<tr>
+<td>L2 轻载</td>
+<td>10%-25% 预估满载</td>
+<td>5-10 分钟</td>
+<td>P50/P95、CPU user/system、内存 RSS、GPU util 是否平稳</td>
+<td>轻载效率</td>
+</tr>
+<tr>
+<td>L3 中载</td>
+<td>50% 预估满载</td>
+<td>5-10 分钟</td>
+<td>吞吐线性度、队列等待、CPU iowait/softirq、PCIe</td>
+<td>线性扩展判断</td>
+</tr>
+<tr>
+<td>L4 高载</td>
+<td>75%-90% 预估满载</td>
+<td>10 分钟</td>
+<td>P99 抬升、上下文切换、内存 page fault、GPU 频率/功耗</td>
+<td>SLA 安全边界</td>
+</tr>
+<tr>
+<td>L5 满载</td>
+<td>100% 可持续满载</td>
+<td>10-15 分钟</td>
+<td>最大 Goodput、饱和资源、错误率、排队深度</td>
+<td>容量上限</td>
+</tr>
+<tr>
+<td>L6 过载验证</td>
+<td>110%-120%，可选</td>
+<td>3-5 分钟</td>
+<td>限流、超时、错误恢复、服务退化是否可控</td>
+<td>保护与退化行为</td>
+</tr>
+</tbody></table></div>
+<p>“100% 可持续满载”不等于瞬时峰值，而是指在不违反错误率、P99 SLA、温度、功耗、显存和队列稳定性约束的情况下，可持续运行的最高负载。</p>
+<h4>9.7.2 阶梯升载方法</h4>
+<p>可选择两种升载方式之一，并在报告中说明：</p>
+<ol>
+<li>固定 RPS 升载：从 0 开始，按 <code>10% -&gt; 25% -&gt; 50% -&gt; 75% -&gt; 90% -&gt; 100%</code> 递增，适合在线服务容量评估。</li>
+<li>固定并发升载：从并发 1 开始，按 <code>1 -&gt; 2 -&gt; 4 -&gt; 8 -&gt; 16 -&gt; 32 -&gt; 64 -&gt; 128</code> 递增，适合定位框架调度和吞吐-延迟拐点。</li>
+</ol>
+<p>若没有历史满载估计，先用短时探索压测获得粗略上限，再按该上限回放标准阶梯。正式报告只采用标准阶梯结果。</p>
+<h4>9.7.3 每阶段采集项</h4>
+<p>每个负载阶段必须同步记录：</p>
+<ul>
+<li>请求侧：RPS、并发、TTFT、ITL/TPOT、E2E latency、P50/P90/P95/P99、错误率、超时率。</li>
+<li>GPU 侧：GPU util、VRAM、功耗、温度、频率、PCIe throughput、ROCm/HIP/RCCL error。</li>
+<li>CPU 侧：整体 CPU、单核热点、服务进程 CPU、user/system/iowait/softirq、load average、run queue。</li>
+<li>内存侧：used/free/cache、swap、RSS/VMS、major/minor page fault、OOM killer 记录。</li>
+<li>I/O 侧：磁盘 read/write、await、util；模型加载阶段和运行阶段分开记录。</li>
+<li>网络侧：RX/TX、连接数、TCP retransmit、listen backlog、客户端与服务端网络延迟。</li>
+<li>服务侧：队列长度、batch size、KV cache 使用、请求排队时间、框架 scheduler 指标。</li>
+</ul>
+<h4>9.7.4 升级与停止条件</h4>
+<p>满足以下条件时，才允许进入下一负载阶段：</p>
+<ul>
+<li>当前阶段运行满最低持续时间。</li>
+<li>P99 latency 未超过 SLA。</li>
+<li>error rate 低于阈值。</li>
+<li>GPU 温度、频率、功耗稳定。</li>
+<li>CPU 不存在持续 95% 以上单核瓶颈或异常 iowait/softirq。</li>
+<li>内存无持续增长、swap、major page fault 激增或 OOM 风险。</li>
+<li>服务队列无持续堆积。</li>
+</ul>
+<p>出现以下任一情况，应停止升载并记录为瓶颈点：</p>
+<ul>
+<li>P99 latency 超 SLA。</li>
+<li>error rate 超阈值。</li>
+<li>CPU run queue 持续升高且吞吐不再增长。</li>
+<li>内存 RSS 持续增长、开始 swap 或触发 OOM。</li>
+<li>GPU util 接近满载但 tokens/s 不再增长。</li>
+<li>GPU 温度或功耗导致频率下降。</li>
+<li>PCIe/RCCL 指标显示通信成为瓶颈。</li>
+<li>服务队列持续堆积或客户端大量超时。</li>
+</ul>
+<h4>9.7.5 阶段性分析输出</h4>
+<p>最终报告必须给出：</p>
+<ul>
+<li>负载阶段 vs P99 latency。</li>
+<li>负载阶段 vs output tokens/s。</li>
+<li>负载阶段 vs CPU 利用率与 run queue。</li>
+<li>负载阶段 vs 内存 RSS、cache、swap、page fault。</li>
+<li>负载阶段 vs GPU util、VRAM、功耗、温度、频率。</li>
+<li>满足 SLA 的最大 Goodput。</li>
+<li>第一个瓶颈资源及证据链。</li>
+</ul>
+<h3>9.8 固定并发压测</h3>
+<p>建议并发阶梯：</p>
+<pre class="code-block" contenteditable="true"><code>1, 2, 4, 8, 16, 32, 64, 128</code></pre>
+<p>观察吞吐-延迟曲线，定位性能拐点。</p>
+<h3>9.9 长上下文测试</h3>
+<p>至少测试：</p>
+<ul>
+<li>4K 输入。</li>
+<li>8K 输入。</li>
+<li>如模型支持，测试 16K 或更高输入。</li>
+</ul>
+<p>关注：</p>
+<ul>
+<li>TTFT 是否急剧上升。</li>
+<li>KV cache 是否接近显存边界。</li>
+<li>多卡 TP 是否因通信放大导致收益下降。</li>
+<li>长上下文下是否出现 OOM 或显存碎片问题。</li>
+</ul>
+<h3>9.10 量化专项测试</h3>
+<p>量化测试必须单独分组：</p>
+<ul>
+<li>BF16/FP16 baseline。</li>
+<li>FP8。</li>
+<li>INT8。</li>
+<li>INT4/AWQ/GPTQ/GGUF。</li>
+</ul>
+<p>输出时必须同时给出：</p>
+<ul>
+<li>性能收益。</li>
+<li>显存节省。</li>
+<li>精度或质量验证方式。</li>
+<li>量化 backend。</li>
+<li>不兼容项或已知限制。</li>
+</ul>
+<h3>9.11 稳定性长跑</h3>
+<p>选取最佳候选配置，执行 2-24 小时稳定性测试。</p>
+<p>观察：</p>
+<ul>
+<li>error rate。</li>
+<li>显存是否持续增长。</li>
+<li>P99 是否漂移。</li>
+<li>tokens/s 是否下降。</li>
+<li>GPU 温度和 clock 是否稳定。</li>
+<li>是否出现 ROCm/HIP/RCCL error。</li>
+</ul>
+<hr>
+<h2>10. 测试数据集规范</h2>
+<h3>10.1 数据集来源</h3>
+<p>可使用：</p>
+<ul>
+<li>合成 prompt。</li>
+<li>公开 benchmark prompt。</li>
+<li>真实业务日志抽样。</li>
+</ul>
+<p>真实业务日志必须脱敏，保留 token 长度分布即可，不应保留敏感内容。</p>
+<h3>10.2 数据集字段</h3>
+<p>推荐 JSONL 格式：</p>
+<pre class="code-block" contenteditable="true"><code>{&quot;id&quot;:&quot;req-000001&quot;,&quot;prompt&quot;:&quot;...&quot;,&quot;input_tokens&quot;:512,&quot;max_output_tokens&quot;:128,&quot;scenario&quot;:&quot;chat&quot;}</code></pre>
+<h3>10.3 数据集固定要求</h3>
+<ul>
+<li>固定 tokenizer。</li>
+<li>固定随机种子。</li>
+<li>固定 prompt 顺序。</li>
+<li>固定 max output tokens。</li>
+<li>固定采样参数。</li>
+</ul>
+<p>建议推理测试使用：</p>
+<pre class="code-block" contenteditable="true"><code>temperature = 0
+top_p = 1
+max_tokens = 固定值
+stream = 按场景分别测试</code></pre>
+<hr>
+<h2>11. 判定标准</h2>
+<div class="table-wrap"><table>
+<thead><tr>
+<th>项目</th>
+<th>建议标准</th>
+</tr></thead><tbody>
+<tr>
+<td>功能正确性</td>
+<td>所有框架通过单请求生成验证</td>
+</tr>
+<tr>
+<td>错误率</td>
+<td>&lt; 0.1%；生产建议为 0</td>
+</tr>
+<tr>
+<td>重复性</td>
+<td>三次测试吞吐标准差 &lt; 5%</td>
+</tr>
+<tr>
+<td>P99 latency</td>
+<td>必须满足业务 SLA</td>
+</tr>
+<tr>
+<td>显存峰值</td>
+<td>建议低于 90%-92%，需留 KV cache 和碎片余量</td>
+</tr>
+<tr>
+<td>温度与频率</td>
+<td>不应出现持续热降频或功耗限制</td>
+</tr>
+<tr>
+<td>8 卡扩展</td>
+<td>TP=8 不应低于 TP=4；若低于必须解释</td>
+</tr>
+<tr>
+<td>日志完整性</td>
+<td>必须保留服务日志、压测日志、监控日志</td>
+</tr>
+<tr>
+<td>公平性</td>
+<td>同模型、同精度、同长度、同 TP 才能横向比较</td>
+</tr>
+</tbody></table></div>
+<hr>
+<h2>12. 结果分析方法</h2>
+<h3>12.1 吞吐-延迟曲线</h3>
+<p>对每个框架绘制：</p>
+<ul>
+<li>RPS vs P99 latency。</li>
+<li>RPS vs output tokens/s。</li>
+<li>并发数 vs P99 latency。</li>
+<li>并发数 vs output tokens/s。</li>
+</ul>
+<p>生产推荐点不应选择吞吐最高点，而应选择满足 SLA 且有余量的最大 Goodput 点。</p>
+<h3>12.2 多卡扩展效率</h3>
+<p>对 TP=1、2、4、8 绘制：</p>
+<ul>
+<li>TP 数 vs tokens/s。</li>
+<li>TP 数 vs 显存峰值。</li>
+<li>TP 数 vs P99 latency。</li>
+<li>TP 数 vs 扩展效率。</li>
+</ul>
+<p>若扩展效率低，应按顺序排查：</p>
+<ol>
+<li>PCIe 拓扑。</li>
+<li>NUMA 绑定。</li>
+<li>RCCL collective 性能。</li>
+<li>batch size / max batched tokens。</li>
+<li>attention backend。</li>
+<li>CPU 调度与网络队列。</li>
+<li>温度和功耗限制。</li>
+</ol>
+<h3>12.3 AMD ROCm 专项分析</h3>
+<p>报告中必须单独给出：</p>
+<ul>
+<li>ROCm 版本是否为官方支持组合。</li>
+<li>Radeon Pro GPU 是否为官方支持或实验支持。</li>
+<li>框架 ROCm backend 是否稳定。</li>
+<li>是否依赖特定环境变量或 workaround。</li>
+<li>是否出现 HIP、RCCL、kernel launch、memory allocation 异常。</li>
+<li>多卡性能瓶颈是否来自 PCIe 或通信。</li>
+</ul>
+<hr>
+<h2>13. 交付物清单</h2>
+<p>最终交付应包含：</p>
+<div class="table-wrap"><table>
+<thead><tr>
+<th>交付物</th>
+<th>内容</th>
+</tr></thead><tbody>
+<tr>
+<td>测试报告</td>
+<td>结论、环境、方法、结果、风险、推荐配置</td>
+</tr>
+<tr>
+<td>原始数据</td>
+<td>JSON/CSV benchmark 输出</td>
+</tr>
+<tr>
+<td>监控数据</td>
+<td><code>amd-smi</code>、系统指标、服务指标</td>
+</tr>
+<tr>
+<td>日志归档</td>
+<td>服务日志、压测日志、错误日志</td>
+</tr>
+<tr>
+<td>启动脚本</td>
+<td>各框架启动命令</td>
+</tr>
+<tr>
+<td>压测脚本</td>
+<td>benchmark 命令与参数</td>
+</tr>
+<tr>
+<td>数据集说明</td>
+<td>prompt 来源、长度分布、脱敏说明</td>
+</tr>
+<tr>
+<td>复现说明</td>
+<td>镜像、版本、环境变量、执行步骤</td>
+</tr>
+<tr>
+<td>风险清单</td>
+<td>ROCm 兼容性、框架限制、性能瓶颈</td>
+</tr>
+<tr>
+<td>生产建议</td>
+<td>推荐框架、推荐 TP、推荐 batch、容量估算</td>
+</tr>
+</tbody></table></div>
+<hr>
+<h2>14. 报告模板建议</h2>
+<p>正式报告建议包含以下章节：</p>
+<ol>
+<li>执行摘要。</li>
+<li>测试范围与限制。</li>
+<li>硬件与软件环境。</li>
+<li>AMD ROCm 兼容性准入结论。</li>
+<li>模型、框架与测试矩阵。</li>
+<li>测试方法与指标定义。</li>
+<li>测试结果总览。</li>
+<li>吞吐与延迟分析。</li>
+<li>多卡扩展效率分析。</li>
+<li>长上下文与显存边界分析。</li>
+<li>量化专项结果。</li>
+<li>稳定性测试结果。</li>
+<li>生产推荐配置。</li>
+<li>风险与后续优化建议。</li>
+<li>附录：命令、日志、原始数据、参考资料。</li>
+</ol>
+<hr>
+<h2>15. 风险与注意事项</h2>
+<ol>
+<li>Radeon Pro 与 Instinct 的 ROCm 支持边界不同，必须以官方兼容矩阵为准。</li>
+<li>PCIe 多卡服务器的 8 卡 TP 扩展不一定线性，甚至可能出现 TP=8 低于 TP=4。</li>
+<li>不同框架默认调度策略不同，必须记录所有影响 batch、KV cache、attention backend 的参数。</li>
+<li>量化结果不能与 BF16/FP16 直接混排。</li>
+<li>单次峰值不能作为正式结论，关键结论必须复测。</li>
+<li>长上下文测试容易暴露显存碎片、KV cache 边界和调度策略差异，应单独分析。</li>
+<li>若框架在 Radeon Pro 上仅为实验性支持，报告结论必须标注“实验验证，不建议直接生产使用”。</li>
+</ol>
+<hr>
+<h2>16. 参考资料</h2>
+<ul>
+<li>ROCm compatibility matrix: <a href="https://rocm.docs.amd.com/en/docs-7.1.0/compatibility/compatibility-matrix.html" target="_blank">https://rocm.docs.amd.com/en/docs-7.1.0/compatibility/compatibility-matrix.html</a></li>
+<li>ROCm on Radeon and Ryzen: <a href="https://rocm.docs.amd.com/projects/radeon-ryzen/en/latest/" target="_blank">https://rocm.docs.amd.com/projects/radeon-ryzen/en/latest/</a></li>
+<li>AMD SMI documentation: <a href="https://rocm.docs.amd.com/projects/amdsmi/en/develop/how-to/amdsmi-cli-tool.html" target="_blank">https://rocm.docs.amd.com/projects/amdsmi/en/develop/how-to/amdsmi-cli-tool.html</a></li>
+<li>rocminfo documentation: <a href="https://rocm.docs.amd.com/projects/rocminfo/en/docs-7.2.0/" target="_blank">https://rocm.docs.amd.com/projects/rocminfo/en/docs-7.2.0/</a></li>
+<li>ROCProfiler / rocprof documentation: <a href="https://rocmdocs.amd.com/projects/rocprofiler/en/latest/how-to/using-rocprof.html" target="_blank">https://rocmdocs.amd.com/projects/rocprofiler/en/latest/how-to/using-rocprof.html</a></li>
+<li>RCCL documentation: <a href="https://rocm.docs.amd.com/projects/rccl/en/latest/what-is-rccl.html" target="_blank">https://rocm.docs.amd.com/projects/rccl/en/latest/what-is-rccl.html</a></li>
+<li>AMD Radeon AI PRO R9700 product page: <a href="https://www.amd.com/en/products/graphics/workstations/radeon-ai-pro/ai-9000-series/amd-radeon-ai-pro-r9700.html" target="_blank">https://www.amd.com/en/products/graphics/workstations/radeon-ai-pro/ai-9000-series/amd-radeon-ai-pro-r9700.html</a></li>
+<li>vLLM ROCm installation and benchmark documentation: <a href="https://docs.vllm.ai/" target="_blank">https://docs.vllm.ai/</a></li>
+<li>SGLang AMD GPU documentation: <a href="https://docs.sglang.ai/platforms/amd_gpu.html" target="_blank">https://docs.sglang.ai/platforms/amd_gpu.html</a></li>
+<li>Hugging Face TGI documentation: <a href="https://huggingface.co/docs/text-generation-inference/index" target="_blank">https://huggingface.co/docs/text-generation-inference/index</a></li>
+<li>NVIDIA GenAI-Perf documentation: <a href="https://docs.nvidia.com/deeplearning/triton-inference-server/user-guide/docs/perf_benchmark/genai-perf-README.html" target="_blank">https://docs.nvidia.com/deeplearning/triton-inference-server/user-guide/docs/perf_benchmark/genai-perf-README.html</a></li>
+<li>MLPerf Inference Datacenter scenarios: <a href="https://mlcommons.org/benchmarks/inference-datacenter/" target="_blank">https://mlcommons.org/benchmarks/inference-datacenter/</a></li>
+</ul>
+    </article>
+  </main>
+  <script>
+    const doc = document.getElementById('doc');
+    const key = 'rocm_8gpu_inference_benchmark_sop_editable_html_v1';
+    const saved = localStorage.getItem(key);
+    if (saved) doc.innerHTML = saved;
+    let timer;
+    doc.addEventListener('input', () => {
+      clearTimeout(timer);
+      timer = setTimeout(() => localStorage.setItem(key, doc.innerHTML), 300);
+    });
+    function downloadHtml() {
+      localStorage.setItem(key, doc.innerHTML);
+      const clone = document.documentElement.cloneNode(true);
+      clone.querySelector('#doc').innerHTML = doc.innerHTML;
+      const blob = new Blob(['<!doctype html>\n' + clone.outerHTML], {type: 'text/html;charset=utf-8'});
+      const a = document.createElement('a');
+      a.href = URL.createObjectURL(blob);
+      a.download = 'rocm_8gpu_inference_benchmark_sop_editable.html';
+      a.click();
+      URL.revokeObjectURL(a.href);
+    }
+    function exportText() {
+      const blob = new Blob([doc.innerText], {type: 'text/plain;charset=utf-8'});
+      const a = document.createElement('a');
+      a.href = URL.createObjectURL(blob);
+      a.download = 'rocm_8gpu_inference_benchmark_sop_edited.md';
+      a.click();
+      URL.revokeObjectURL(a.href);
+    }
+    function clearDraft() {
+      if (confirm('确定清除当前浏览器里的自动保存草稿？页面文件不会被删除。')) {
+        localStorage.removeItem(key);
+        location.reload();
+      }
+    }
+  </script>
+</body>
+</html>
