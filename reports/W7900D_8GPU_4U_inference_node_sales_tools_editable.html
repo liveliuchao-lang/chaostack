@@ -1,0 +1,1258 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>4U 8x W7900D 384GB 本地推理节点 Sales Tools</title>
+  <style>
+    :root {
+      --ink: #172023;
+      --muted: #5c6a6e;
+      --line: #d7dfdd;
+      --paper: #fbfcfb;
+      --panel: #ffffff;
+      --accent: #0a6b5d;
+      --accent-2: #9a3f20;
+      --soft: #edf6f2;
+      --soft-2: #f4f7f6;
+      --warn: #fff3df;
+      --bad: #f9e5df;
+      --good: #e7f4ed;
+      --blue: #e8f1fb;
+    }
+    * { box-sizing: border-box; }
+    html { scroll-behavior: smooth; }
+    body {
+      margin: 0;
+      background: var(--paper);
+      color: var(--ink);
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC",
+        "Microsoft YaHei", "Noto Sans CJK SC", Arial, sans-serif;
+      line-height: 1.62;
+    }
+    a { color: var(--accent); text-decoration: none; border-bottom: 1px solid rgba(10, 107, 93, .3); }
+    a:hover { border-bottom-color: currentColor; }
+    .page { max-width: 1280px; margin: 0 auto; padding: 30px 22px 72px; }
+    header {
+      border-bottom: 2px solid var(--ink);
+      padding: 28px 0 22px;
+      margin-bottom: 22px;
+    }
+    .kicker { color: var(--accent-2); font-weight: 800; font-size: 13px; letter-spacing: .04em; text-transform: uppercase; }
+    h1 { margin: 8px 0 12px; font-size: clamp(32px, 5vw, 58px); line-height: 1.05; letter-spacing: 0; }
+    .subtitle { margin: 0; max-width: 980px; color: var(--muted); font-size: 18px; }
+    .meta { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 18px; color: var(--muted); font-size: 13px; }
+    .pill { border: 1px solid var(--line); border-radius: 999px; padding: 5px 10px; background: #fff; }
+    .notice {
+      background: var(--warn);
+      border-left: 4px solid var(--accent-2);
+      padding: 12px 16px;
+      border-radius: 8px;
+      margin: 18px 0;
+      color: #58330f;
+    }
+    nav {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(205px, 1fr));
+      gap: 8px;
+      margin: 18px 0 30px;
+    }
+    nav a {
+      display: block;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: #fff;
+      padding: 9px 11px;
+      color: var(--ink);
+      font-size: 14px;
+    }
+    nav a:hover,
+    nav a.active { border-color: var(--accent); color: var(--accent); background: var(--soft); font-weight: 800; }
+    .pager-toolbar {
+      position: sticky;
+      top: 0;
+      z-index: 10;
+      display: grid;
+      grid-template-columns: auto minmax(220px, 1fr) auto auto;
+      gap: 10px;
+      align-items: center;
+      background: rgba(251, 252, 251, .94);
+      backdrop-filter: blur(8px);
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      padding: 10px;
+      margin: 18px 0 12px;
+      box-shadow: 0 8px 18px rgba(23, 32, 35, .06);
+    }
+    .pager-button {
+      appearance: none;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: #fff;
+      color: var(--ink);
+      cursor: pointer;
+      font: inherit;
+      font-weight: 800;
+      padding: 8px 12px;
+      min-height: 38px;
+    }
+    .pager-button:hover:not(:disabled) { border-color: var(--accent); color: var(--accent); background: var(--soft); }
+    .pager-button:disabled { cursor: not-allowed; opacity: .45; }
+    .mode-button { background: var(--accent); border-color: var(--accent); color: #fff; }
+    .mode-button:hover { background: #07584d; color: #fff; }
+    .pager-status { display: flex; flex-wrap: wrap; gap: 8px; align-items: baseline; color: var(--muted); font-size: 13px; }
+    .pager-status strong { color: var(--ink); font-size: 15px; }
+    main[contenteditable="true"]:focus { outline: 2px dashed rgba(10, 107, 93, .45); outline-offset: 8px; }
+    section {
+      background: var(--panel);
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      padding: 22px;
+      margin: 18px 0;
+    }
+    body.paged-mode main section { display: none; }
+    body.paged-mode main section.active { display: block; min-height: 58vh; }
+    body.continuous-mode main section { display: block; }
+    .section-kicker { color: var(--accent-2); font-size: 12px; font-weight: 800; letter-spacing: .03em; margin-bottom: 8px; }
+    h2 { margin: 0 0 12px; font-size: 28px; line-height: 1.25; color: var(--accent); }
+    h3 { margin: 24px 0 8px; font-size: 20px; line-height: 1.3; }
+    h4 { margin: 18px 0 8px; font-size: 16px; line-height: 1.35; color: #263638; }
+    p { margin: 8px 0 12px; }
+    ul, ol { padding-left: 22px; margin: 8px 0 14px; }
+    li { margin: 6px 0; }
+    .grid { display: grid; grid-template-columns: repeat(12, 1fr); gap: 14px; margin: 18px 0; }
+    .card { background: var(--soft-2); border: 1px solid var(--line); border-radius: 8px; padding: 16px; min-height: 100%; }
+    .card h3 { margin-top: 0; }
+    .span-3 { grid-column: span 3; }
+    .span-4 { grid-column: span 4; }
+    .span-6 { grid-column: span 6; }
+    .span-8 { grid-column: span 8; }
+    .span-12 { grid-column: span 12; }
+    table { width: 100%; border-collapse: collapse; margin: 14px 0 20px; background: #fff; border: 1px solid var(--line); font-size: 14px; }
+    th, td { border: 1px solid var(--line); padding: 9px 10px; text-align: left; vertical-align: top; }
+    th { background: var(--soft-2); font-weight: 800; color: #233134; }
+    tr:nth-child(even) td { background: #fcfdfc; }
+    .tag { display: inline-block; padding: 2px 7px; border-radius: 999px; font-size: 12px; font-weight: 800; white-space: nowrap; margin: 1px 4px 1px 0; }
+    .tag.good { background: var(--good); color: #236041; }
+    .tag.mid { background: var(--warn); color: #754710; }
+    .tag.bad { background: var(--bad); color: #843921; }
+    .tag.info { background: var(--blue); color: #244f7a; }
+    .callout { border-left: 4px solid var(--accent); background: var(--soft); padding: 12px 16px; margin: 16px 0; border-radius: 8px; color: #24413c; }
+    .callout.warn { border-left-color: var(--accent-2); background: var(--warn); color: #58330f; }
+    code { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-size: .92em; background: #eef2f1; border-radius: 4px; padding: 1px 5px; }
+    footer { color: var(--muted); border-top: 2px solid var(--ink); margin-top: 28px; padding-top: 14px; font-size: 13px; }
+    @media (max-width: 860px) {
+      .page { padding: 20px 14px 48px; }
+      .pager-toolbar { grid-template-columns: 1fr 1fr; }
+      .pager-status { grid-column: 1 / -1; order: -1; }
+      .mode-button { grid-column: 1 / -1; }
+      section { padding: 16px; }
+      table { display: block; overflow-x: auto; white-space: normal; }
+      .span-3, .span-4, .span-6, .span-8 { grid-column: span 12; }
+      h1 { font-size: 34px; }
+    }
+    @media print {
+      body { background: #fff; }
+      .page { max-width: none; padding: 16mm; }
+      nav, .notice, .pager-toolbar { display: none; }
+      section, body.paged-mode main section, body.paged-mode main section.active {
+        display: block;
+        border: 0;
+        padding: 0;
+        break-inside: avoid;
+        min-height: 0;
+      }
+      a { color: #000; border-bottom: 0; }
+    }
+  </style>
+</head>
+<body class="paged-mode">
+  <div class="page">
+    <header>
+      <div class="kicker">Editable Sales Tools for 4U Inference Node</div>
+      <h1>4U 8x AMD Radeon PRO W7900D 384GB 本地推理服务器 Sales Tools</h1>
+      <p class="subtitle">把 W7900D 从“单卡本地 AI”重新定位为 4U 8 卡、384GB ECC GDDR6 显存的部门级/企业级本地推理算力节点，覆盖终端客户私有化部署、600 台以上规模 IaaS 推理算力集群运营、裸金属服务器租赁三类业务形态，围绕客户需求、模型适配、部署模板、POC 验收和销售打法形成一套可直接改稿的资料。</p>
+      <div class="meta">
+        <span class="pill">生成日期：2026-05-09</span>
+        <span class="pill">目标形态：4U 服务器，8x W7900D，合计 384GB 显存</span>
+        <span class="pill">正文内容：可手工编辑</span>
+      </div>
+    </header>
+
+    <div class="notice">
+      使用方式：顶部可分页切换，也可改成连续模式。正文区域设置为 <code>contenteditable</code>，浏览器内可临时编辑；正式版本建议用文本编辑器直接修改此 HTML 文件。
+    </div>
+
+    <div class="pager-toolbar" aria-label="Page controls">
+      <button type="button" class="pager-button" data-prev>上一页</button>
+      <div class="pager-status" aria-live="polite">
+        <span data-page-status>1 / 13</span>
+        <strong data-page-title>销售定位总览</strong>
+      </div>
+      <button type="button" class="pager-button" data-next>下一页</button>
+      <button type="button" class="pager-button mode-button" data-mode-toggle>连续模式</button>
+    </div>
+
+    <nav aria-label="Sales tools table of contents">
+      <a href="#section-1">销售定位总览</a>
+      <a href="#section-2">硬件与软件边界</a>
+      <a href="#section-3">客户需求场景</a>
+      <a href="#section-4">模型适配策略</a>
+      <a href="#section-5">8 卡部署模板</a>
+      <a href="#section-6">行业打法</a>
+      <a href="#section-7">售前发现问题</a>
+      <a href="#section-8">POC 与验收</a>
+      <a href="#section-9">竞争与异议</a>
+      <a href="#section-10">配置与扩容</a>
+      <a href="#section-11">销售话术模板</a>
+      <a href="#section-12">IaaS 与裸金属租赁</a>
+      <a href="#section-13">来源与核验</a>
+    </nav>
+
+    <main id="editable-8gpu-sales-tools" contenteditable="true" spellcheck="false">
+      <section id="section-1" class="tool-page active" data-page="1" data-title="销售定位总览">
+        <div class="section-kicker">01 / Executive Sales Positioning</div>
+        <h2>销售定位总览：不是“大显存单机”，而是本地 AI 推理资源池</h2>
+        <div class="callout">
+          <strong>一句话定位：</strong>4U 8x W7900D 推理服务器适合交付给需要私有化、可控成本、多模型并发、本地数据闭环的客户，也适合纳入既有 600 台以上 IaaS 集群，在运营商高等级 IDC、成熟网络带宽和运维条件下提供推理算力资源池与裸金属算力服务器租赁。主打 32B 级模型多副本生产、70B/72B 低并发高质量服务、RAG/文档/VLM/代码助手一体化，而不是替代 Instinct/H100/H200 去跑 671B 或 1T 级高并发推理。
+        </div>
+        <div class="grid">
+          <div class="card span-3">
+            <h3>384GB 显存</h3>
+            <p>8 张 W7900D 合计 384GB ECC GDDR6。销售表达要强调“8 个 48GB 推理单元”，不要简单说成一个天然池化的大显存。</p>
+          </div>
+          <div class="card span-3">
+            <h3>8 路业务并发</h3>
+            <p>最强打法是数据并行和任务级并行：多个 32B LLM 副本、Embedding/Reranker、VLM/OCR、代码模型、离线批处理分卡部署。</p>
+          </div>
+          <div class="card span-3">
+            <h3>本地合规</h3>
+            <p>适合金融、制造、设计院、政企、医疗、教育科研、软件研发等对数据出域敏感的客户。</p>
+          </div>
+          <div class="card span-3">
+            <h3>成本梯度</h3>
+            <p>位于“消费级拼装 GPU”与“数据中心 Instinct/H 系列”之间，适合从样板走向部门级生产。</p>
+          </div>
+        </div>
+        <div class="callout">
+          <strong>三类业务形态：</strong>面向终端客户提供“私有化 AI 推理节点”；面向模型厂商、ISV、科研机构、企业 AI 团队提供“600+ 台规模 IaaS 推理算力资源池”；面向短期项目、模型适配、POC 和专属环境需求提供“整机裸金属 GPU 服务器租赁”。三者共用同一硬件底座，但 SLA、隔离、计费、运维责任和销售话术应分开设计。
+        </div>
+        <table>
+          <thead>
+            <tr>
+              <th>主张</th>
+              <th>推荐说法</th>
+              <th>避免说法</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>算力节点定位</td>
+              <td>“一台可运行多模型、多业务队列的私有 AI 推理资源池。”</td>
+              <td>“384GB 显存等同一张 384GB GPU。”</td>
+            </tr>
+            <tr>
+              <td>模型定位</td>
+              <td>“32B 级模型是生产主力，70B/72B 是高质量低并发，235B/671B 是验证或分流路线。”</td>
+              <td>“所有开源大模型都能顺滑生产。”</td>
+            </tr>
+            <tr>
+              <td>ROCm 定位</td>
+              <td>“Radeon on Linux 已覆盖 PyTorch、vLLM、llama.cpp、ONNX/MIGraphX 等路线，但要逐模型 POC。”</td>
+              <td>“Instinct 上的新 kernel 优化在 W7900D 上天然完全等效。”</td>
+            </tr>
+          </tbody>
+        </table>
+      </section>
+
+      <section id="section-2" class="tool-page" data-page="2" data-title="硬件与软件边界">
+        <div class="section-kicker">02 / Hardware and ROCm Boundary</div>
+        <h2>硬件与软件边界：先把真实能力说清楚</h2>
+        <p>AMD 中国官网显示，W7900D 为 RDNA 3、48GB GDDR6、384-bit、864GB/s、ECC、FP16 矩阵 106 TFLOPS、INT8 106 TOPS、INT4 212 TOPS、295W、PCIe 4.0 x16、Triple Slot 主动散热。8 卡合计指标可以用于“资源池规模”表达，但不能等同于单模型线性加速。</p>
+        <table>
+          <thead>
+            <tr>
+              <th>指标</th>
+              <th>单卡 W7900D</th>
+              <th>8 卡合计</th>
+              <th>销售解释</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>显存</td>
+              <td>48GB ECC GDDR6</td>
+              <td>384GB ECC GDDR6</td>
+              <td>适合多模型和多副本；单模型跨卡需要 tensor/expert parallel 和引擎适配。</td>
+            </tr>
+            <tr>
+              <td>显存带宽</td>
+              <td>864GB/s</td>
+              <td>约 6.9TB/s 聚合</td>
+              <td>独立 workload 近似累加；跨卡模型并行受 PCIe/RCCL 通信影响。</td>
+            </tr>
+            <tr>
+              <td>FP16 矩阵</td>
+              <td>106 TFLOPS</td>
+              <td>848 TFLOPS 理论峰值</td>
+              <td>推理实际取决于 attention、GEMM kernel、batch、上下文和量化路径。</td>
+            </tr>
+            <tr>
+              <td>INT4 矩阵</td>
+              <td>212 TOPS</td>
+              <td>1696 TOPS 理论峰值</td>
+              <td>量化格式、算子融合、解码阶段访存瓶颈会决定实际收益。</td>
+            </tr>
+            <tr>
+              <td>功耗</td>
+              <td>295W TBP</td>
+              <td>GPU 约 2360W，不含 CPU/内存/风扇/存储</td>
+              <td>4U 8 卡必须验证供电、气流、噪声、降频和长期稳定性。</td>
+            </tr>
+          </tbody>
+        </table>
+        <h3>ROCm 边界判断</h3>
+        <table>
+          <thead>
+            <tr>
+              <th>软件层</th>
+              <th>适合度</th>
+              <th>8 卡节点建议</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>Linux + ROCm + PyTorch/Transformers</td>
+              <td><span class="tag good">基础栈</span></td>
+              <td>用于模型验证、Embedding、VLM、ComfyUI、离线批处理。生产环境用容器固化版本。</td>
+            </tr>
+            <tr>
+              <td>vLLM ROCm</td>
+              <td><span class="tag good">主服务栈</span></td>
+              <td>用于 OpenAI-compatible API、continuous batching、prefix caching、LoRA、32B 多副本服务。TP/长上下文逐模型压测。</td>
+            </tr>
+            <tr>
+              <td>llama.cpp HIP/ROCm</td>
+              <td><span class="tag good">低风险备选</span></td>
+              <td>用于 GGUF 量化、单用户/低并发、嵌入式交付、离线知识库工具。</td>
+            </tr>
+            <tr>
+              <td>SGLang ROCm</td>
+              <td><span class="tag mid">前沿评估</span></td>
+              <td>适合复杂 agent、prefix reuse、结构化推理验证；生产前要做稳定性和 kernel 兼容性测试。</td>
+            </tr>
+            <tr>
+              <td>ONNX Runtime + MIGraphX</td>
+              <td><span class="tag good">固定图稳健</span></td>
+              <td>适合 OCR、检测、分类、文档视觉前处理、传统 CV/NLP 模型。</td>
+            </tr>
+          </tbody>
+        </table>
+        <div class="callout warn">
+          W7900D 是中国市场版本，ROCm 公开兼容矩阵常以 W7900/W7900 Dual Slot 等型号列示。实际 8 卡 4U 项目必须做 OEM 整机、驱动、ROCm 可见性、mGPU、散热和长稳压测确认。
+        </div>
+      </section>
+
+      <section id="section-3" class="tool-page" data-page="3" data-title="客户需求场景">
+        <div class="section-kicker">03 / Customer Demand Scenarios</div>
+        <h2>客户业务需求：8 卡节点解决的不是“能跑模型”，而是“本地 AI 生产化”</h2>
+        <table>
+          <thead>
+            <tr>
+              <th>客户痛点</th>
+              <th>典型现状</th>
+              <th>8x W7900D 节点价值</th>
+              <th>优先级</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>数据不能出域</td>
+              <td>合同、图纸、源代码、财务、病历、政务材料不能直接发云端大模型。</td>
+              <td>本地部署 32B 级模型、RAG、Embedding/Reranker、VLM，形成内网 AI API。</td>
+              <td><span class="tag good">P0</span></td>
+            </tr>
+            <tr>
+              <td>单卡样板已不够</td>
+              <td>POC 能跑，但多人使用时排队，Embedding、重排、视觉、主模型互相抢显存。</td>
+              <td>8 卡按业务拆分，提升并发、隔离和可用性。</td>
+              <td><span class="tag good">P0</span></td>
+            </tr>
+            <tr>
+              <td>需要多模型共存</td>
+              <td>通用问答、代码、推理、文档、图像生成使用不同模型。</td>
+              <td>一台节点同时承载多个专用模型，降低跨团队重复采购。</td>
+              <td><span class="tag good">P0</span></td>
+            </tr>
+            <tr>
+              <td>预算上不去 Instinct/H 系列</td>
+              <td>客户要本地 AI，但数据中心 GPU 预算、供货、机房条件或采购周期受限。</td>
+              <td>以更可控成本搭建部门级算力池，先落 RAG/代码/文档生产价值。</td>
+              <td><span class="tag mid">P1</span></td>
+            </tr>
+            <tr>
+              <td>想跑全尺寸 MoE</td>
+              <td>客户提 DeepSeek-R1、Qwen3-235B、Kimi K2 等大模型。</td>
+              <td>用 8 卡做评估和低频专家服务，同时引导客户理解生产主力应选蒸馏/32B/70B。</td>
+              <td><span class="tag mid">P1/P2</span></td>
+            </tr>
+          </tbody>
+        </table>
+        <h3>最佳客户画像</h3>
+        <div class="grid">
+          <div class="card span-4">
+            <h3>企业 AI 平台小组</h3>
+            <p>已有知识库、内部 API、AI 助手规划，需要把 POC 变成可多人访问的内网服务。</p>
+          </div>
+          <div class="card span-4">
+            <h3>制造与设计院</h3>
+            <p>图纸、BOM、工艺、招投标、规范文档量大，同时有专业图形和本地推理需求。</p>
+          </div>
+          <div class="card span-4">
+            <h3>软件研发组织</h3>
+            <p>需要代码助手、仓库问答、PR 摘要、测试生成、规范检查，且源代码不能出域。</p>
+          </div>
+          <div class="card span-4">
+            <h3>高校与科研院所</h3>
+            <p>需要开放模型实验、RAG 课程平台、多用户推理服务，预算和合规比极限性能更重要。</p>
+          </div>
+          <div class="card span-4">
+            <h3>ISV/SI 方案团队</h3>
+            <p>需要带着私有化 AI 一体机方案去做行业 Demo、POC 和交付样板。</p>
+          </div>
+          <div class="card span-4">
+            <h3>政企与金融内网</h3>
+            <p>关注数据边界、采购可控、离线部署、审计和可运维性。</p>
+          </div>
+        </div>
+      </section>
+
+      <section id="section-4" class="tool-page" data-page="4" data-title="模型适配策略">
+        <div class="section-kicker">04 / Model Fit Strategy</div>
+        <h2>模型适配策略：32B 多副本是主力，70B 是高质量档，235B 以上要谨慎</h2>
+        <table>
+          <thead>
+            <tr>
+              <th>模型档位</th>
+              <th>代表模型</th>
+              <th>8x W7900D 适配判断</th>
+              <th>销售建议</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>7B-14B</td>
+              <td>Qwen3-8B、Llama-3.1-8B、Phi-4、DeepSeek-R1-Distill-Qwen-14B</td>
+              <td><span class="tag good">高并发/低延迟</span> 单卡多实例或多副本，适合草稿模型、工具调用、分类抽取。</td>
+              <td>作为轻量模型、speculative decoding 草稿端、边缘任务模型，不作为 8 卡节点核心价值单独售卖。</td>
+            </tr>
+            <tr>
+              <td>20B-34B</td>
+              <td>Qwen3-32B、Qwen3-30B-A3B、DeepSeek-R1-Distill-Qwen-32B、GLM-4-32B、Qwen3-Coder-30B-A3B、Mistral Small 3.2 24B、Qwen2.5-VL-32B</td>
+              <td><span class="tag good">生产主力</span> 单卡量化或 8-bit 可落地，8 卡可做多副本、多模型、多业务隔离。</td>
+              <td>主推。适合 RAG、文档分析、代码助手、Agent、VLM、行业助手。</td>
+            </tr>
+            <tr>
+              <td>70B/72B</td>
+              <td>Llama-3.1/3.3-70B、DeepSeek-R1-Distill-Llama-70B、Qwen2.5-72B、Qwen3-72B 级模型</td>
+              <td><span class="tag mid">高质量低并发</span> 单卡 Q4 可尝试，2 卡/4 卡更稳；长上下文和并发会显著占用 KV cache。</td>
+              <td>作为专家模型或质量对照，不建议承诺多人高并发主模型。</td>
+            </tr>
+            <tr>
+              <td>235B MoE</td>
+              <td>Qwen3-235B-A22B-Thinking-2507</td>
+              <td><span class="tag mid">可评估，不做默认生产</span> 235B 总参数、22B 激活、262K 上下文；8 卡 TP 示例存在，但 W7900D 上受显存余量、PCIe 通信、ROCm kernel 和长上下文压力影响。</td>
+              <td>用于“复杂推理专家服务”POC，默认限低并发、短上下文、严格验收。</td>
+            </tr>
+            <tr>
+              <td>480B/671B/1T MoE</td>
+              <td>Qwen3-Coder-480B-A35B、DeepSeek-R1 671B/37B active、Kimi K2 1T/32B active</td>
+              <td><span class="tag bad">不作为标准方案</span> 即使激活参数较低，权重、KV cache、专家路由和通信成本仍会压垮 8x48GB 的工程余量。</td>
+              <td>引导到 Instinct/数据中心 GPU/云端大模型；W7900D 节点承载蒸馏模型和业务流水线。</td>
+            </tr>
+          </tbody>
+        </table>
+        <h3>适合主推的模型清单</h3>
+        <table>
+          <thead>
+            <tr>
+              <th>业务</th>
+              <th>主推模型</th>
+              <th>协议</th>
+              <th>参考公开表现</th>
+              <th>8 卡节点部署方式</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>企业 RAG/通用助手</td>
+              <td>Qwen3-32B、Qwen3-30B-A3B</td>
+              <td>Apache-2.0</td>
+              <td>Qwen3-32B 公开表中 MMLU-Redux 90.0、MATH-500 98.0；Qwen3-30B-A3B 激活参数低，适合效率展示。</td>
+              <td>4-6 张卡跑 LLM 副本，1 张卡跑 Embedding/Reranker，1 张卡做 VLM/批处理。</td>
+            </tr>
+            <tr>
+              <td>复杂推理/数学/复核</td>
+              <td>DeepSeek-R1-Distill-Qwen-32B、DeepSeek-R1-Distill-Llama-70B</td>
+              <td>MIT/派生协议需核对</td>
+              <td>DeepSeek 模型卡：32B 蒸馏模型 AIME 2024 72.6、MATH-500 94.3；70B 蒸馏模型 GPQA Diamond 65.2。</td>
+              <td>32B 做生产专家；70B 做低并发质量档。</td>
+            </tr>
+            <tr>
+              <td>代码助手</td>
+              <td>Qwen3-Coder-30B-A3B、Phi-4</td>
+              <td>Apache-2.0 / MIT</td>
+              <td>Qwen3-Coder 强调 agentic coding 和 256K 原生上下文；Phi-4 模型卡显示 MMLU 84.8、MATH 80.4、HumanEval 82.6。</td>
+              <td>2-4 张卡跑代码模型副本，1 张卡跑仓库 embedding，1 张卡跑快速草稿/规则模型。</td>
+            </tr>
+            <tr>
+              <td>Agent/函数调用/报告生成</td>
+              <td>GLM-4-32B-0414、Qwen3-32B、Mistral Small 3.2</td>
+              <td>MIT / Apache-2.0</td>
+              <td>GLM-4-32B 模型卡强调 BFCL、TAU-Bench、SimpleQA；Mistral Small 3.2 模型卡有 MMLU 80.5、DocVQA 94.86。</td>
+              <td>按业务队列拆分，配合工具网关、审计、结构化输出。</td>
+            </tr>
+            <tr>
+              <td>视觉文档/图纸/PDF</td>
+              <td>Qwen2.5-VL-32B、Mistral Small 3.2、Gemma-3-27B-IT</td>
+              <td>Apache-2.0 / Gemma Terms</td>
+              <td>Qwen2.5-VL 官方博客称 32B 版在多模态推理任务上表现强；Mistral Small 3.2 DocVQA 94.86。</td>
+              <td>1-2 张卡跑 VLM，其他卡跑 OCR/Embedding/LLM 复核。</td>
+            </tr>
+            <tr>
+              <td>检索组件</td>
+              <td>Qwen3-Embedding-8B、Qwen3-Reranker、BGE-M3</td>
+              <td>Apache-2.0 / MIT</td>
+              <td>Qwen3-Embedding-8B 模型卡给出 MTEB multilingual mean 70.58；BGE-M3 支持 dense/sparse/multi-vector。</td>
+              <td>固定 1 张卡做 embedding/rerank 服务，避免主 LLM 被检索任务抢资源。</td>
+            </tr>
+          </tbody>
+        </table>
+      </section>
+
+      <section id="section-5" class="tool-page" data-page="5" data-title="8 卡部署模板">
+        <div class="section-kicker">05 / 8-GPU Deployment Blueprints</div>
+        <h2>8 卡部署模板：用任务级并行最大化商业价值</h2>
+        <h3>模板 A：企业知识库/RAG 生产节点</h3>
+        <table>
+          <thead>
+            <tr>
+              <th>GPU</th>
+              <th>角色</th>
+              <th>推荐模型/服务</th>
+              <th>业务价值</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr><td>GPU0-GPU3</td><td>主 LLM 副本池</td><td>Qwen3-32B 或 GLM-4-32B，vLLM</td><td>部门多人问答、文档总结、知识库问答。</td></tr>
+            <tr><td>GPU4</td><td>Embedding/Reranker</td><td>Qwen3-Embedding/BGE-M3 + Reranker</td><td>提升召回和答案准确率，避免检索任务挤占主模型。</td></tr>
+            <tr><td>GPU5</td><td>VLM/OCR 辅助</td><td>Qwen2.5-VL-32B 或 OCR/ONNX 服务</td><td>PDF 页面、截图、图纸、表格理解。</td></tr>
+            <tr><td>GPU6</td><td>推理专家模型</td><td>DeepSeek-R1-Distill-Qwen-32B</td><td>复杂问题复核、数学、逻辑链检查。</td></tr>
+            <tr><td>GPU7</td><td>批处理/灰度/备用</td><td>离线摘要、评测、模型灰度</td><td>降低线上变更风险，承接夜间批处理。</td></tr>
+          </tbody>
+        </table>
+        <h3>模板 B：代码助手与研发平台</h3>
+        <table>
+          <thead><tr><th>GPU 分配</th><th>服务</th><th>适合客户</th><th>注意事项</th></tr></thead>
+          <tbody>
+            <tr><td>GPU0-GPU3</td><td>Qwen3-Coder-30B-A3B 多副本</td><td>软件公司、研发中心、芯片/EDA/工业软件团队</td><td>长上下文会显著消耗显存，仓库级理解建议配合检索而不是一次塞满上下文。</td></tr>
+            <tr><td>GPU4</td><td>代码 embedding / repo index</td><td>大仓库问答、代码搜索</td><td>需要增量索引、权限过滤、审计日志。</td></tr>
+            <tr><td>GPU5</td><td>Phi-4 或 8B/14B 快速模型</td><td>代码补全、测试样例、草稿响应</td><td>作为低延迟模型，不承诺替代 32B 主模型质量。</td></tr>
+            <tr><td>GPU6-GPU7</td><td>PR 摘要、单测生成、离线扫描</td><td>CI/CD 流水线</td><td>用队列削峰，避免影响在线问答。</td></tr>
+          </tbody>
+        </table>
+        <h3>模板 C：70B 高质量专家节点</h3>
+        <p>当客户明确要求高质量模型，可把 8 卡拆成 2-4 个专家服务，而不是 8 个 32B 副本。示例：GPU0-GPU1 跑 70B 量化专家模型，GPU2-GPU3 跑第二个 70B/72B，GPU4 跑 embedding/rerank，GPU5 跑 32B 快速回答，GPU6 跑 VLM，GPU7 做批处理。验收重点从 QPS 转向正确率、P95、稳定性和单位任务成本。</p>
+        <h3>模板 D：大模型研究/演示节点</h3>
+        <p>可尝试 Qwen3-235B-A22B-Thinking-2507 的 8 卡 TP/EP 低并发评估，但必须把它定位为研究演示或高端专家服务。DeepSeek-R1 671B、Kimi K2 1T、Qwen3-Coder-480B 不建议作为 W7900D 8 卡标准交付目标。</p>
+      </section>
+
+      <section id="section-6" class="tool-page" data-page="6" data-title="行业打法">
+        <div class="section-kicker">06 / Industry Plays</div>
+        <h2>行业打法：按“业务闭环”而不是“模型榜单”卖</h2>
+        <table>
+          <thead>
+            <tr>
+              <th>行业</th>
+              <th>高价值场景</th>
+              <th>推荐模型栈</th>
+              <th>验收指标</th>
+              <th>销售切入语</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>制造/设计院/AEC</td>
+              <td>图纸问答、规范检索、BOM/工艺文档总结、招投标材料生成。</td>
+              <td>Qwen3-32B + Qwen2.5-VL-32B + BGE/Qwen3-Embedding + OCR/ONNX。</td>
+              <td>图纸/规范问答准确率、引用可追溯、批量文档处理时长。</td>
+              <td>“让图纸、规范、历史项目资料留在内网里被模型读懂。”</td>
+            </tr>
+            <tr>
+              <td>金融/法务/审计</td>
+              <td>合同审查、制度问答、尽调材料摘要、审计底稿辅助。</td>
+              <td>Qwen3-32B 或 GLM-4-32B + Reranker + DeepSeek-R1-Distill-32B 复核。</td>
+              <td>条款定位准确率、引用命中率、人工复核节省时间、幻觉率。</td>
+              <td>“不把敏感材料出域，也能形成可审计的 AI 助手。”</td>
+            </tr>
+            <tr>
+              <td>软件研发</td>
+              <td>仓库问答、代码审查、PR 摘要、单测生成、故障定位。</td>
+              <td>Qwen3-Coder-30B-A3B + Phi-4 + 代码 embedding + CI 队列。</td>
+              <td>缺陷定位命中率、单测通过率、PR 审查覆盖率、开发者采纳率。</td>
+              <td>“代码不出内网，同时让研发团队拥有自己的代码模型服务。”</td>
+            </tr>
+            <tr>
+              <td>教育科研</td>
+              <td>开放模型教学、多用户推理、论文/实验助手、模型对比实验。</td>
+              <td>Qwen3-32B、DeepSeek distill、Mistral、Llama、Embedding/Reranker。</td>
+              <td>并发用户数、模型切换速度、实验复现、资源隔离。</td>
+              <td>“用一台节点支撑多课程、多课题组的本地开放模型实验。”</td>
+            </tr>
+            <tr>
+              <td>政企/公共部门</td>
+              <td>政策问答、办事材料辅助、内部知识库、舆情材料摘要。</td>
+              <td>国产模型优先：Qwen3、GLM-4、DeepSeek distill、BGE/Qwen embedding。</td>
+              <td>内网部署、权限隔离、日志审计、引用可追溯。</td>
+              <td>“先建设可控、可审计、可迭代的本地 AI 能力。”</td>
+            </tr>
+            <tr>
+              <td>医疗/生命科学</td>
+              <td>病历摘要、指南检索、科研文献问答、影像报告辅助。</td>
+              <td>Qwen3-32B + 医学 RAG + Reranker + VLM/OCR。</td>
+              <td>引用准确率、敏感数据隔离、医生复核时间、合规流程。</td>
+              <td>“AI 先做辅助和检索增强，不替代专业判断。”</td>
+            </tr>
+            <tr>
+              <td>媒体/营销/电商</td>
+              <td>内容生成、素材理解、商品知识库、批量海报/图像生成。</td>
+              <td>Qwen3-32B/Mistral + Qwen2.5-VL + ComfyUI/视觉模型。</td>
+              <td>素材生成周期、人工修改次数、多语言输出质量。</td>
+              <td>“一台节点同时跑文案、图像、视觉理解和知识库。”</td>
+            </tr>
+          </tbody>
+        </table>
+      </section>
+
+      <section id="section-7" class="tool-page" data-page="7" data-title="售前发现问题">
+        <div class="section-kicker">07 / Discovery Questions</div>
+        <h2>售前发现问题：先问业务，再问模型，再问 SLA</h2>
+        <div class="grid">
+          <div class="card span-6">
+            <h3>业务与数据</h3>
+            <ul>
+              <li>哪些数据不能出域？合同、图纸、源代码、病历、财务、政务材料分别占比多少？</li>
+              <li>用户每天问多少次？高峰并发多少？是交互式问答还是批量离线任务？</li>
+              <li>答案是否必须有引用来源？能否接受模型只做初稿，人工复核后使用？</li>
+              <li>文档类型有哪些：PDF、扫描件、CAD 截图、Excel、网页、代码仓库、数据库？</li>
+              <li>客户最想先落地的前三个业务闭环是什么？每个闭环的人工成本在哪里？</li>
+            </ul>
+          </div>
+          <div class="card span-6">
+            <h3>模型与质量</h3>
+            <ul>
+              <li>客户是否指定模型？指定的是品牌、榜单分数、开源协议，还是已有应用适配？</li>
+              <li>主力模型可接受 32B 量化吗？哪些问题必须交给 70B/235B 专家模型？</li>
+              <li>是否需要中文、英文、代码、多模态、数学推理、工具调用或结构化输出？</li>
+              <li>上下文长度真实需求是多少：8K、16K、32K、128K，还是“以为越长越好”？</li>
+              <li>是否需要同时跑多个 LoRA、多个租户、多个模型版本？</li>
+            </ul>
+          </div>
+          <div class="card span-6">
+            <h3>IT 与运维</h3>
+            <ul>
+              <li>机房是否支持 4U、3kW 以上整机功耗、前后风道和噪声要求？</li>
+              <li>是否要求 Ubuntu/RHEL、离线安装、内网镜像源、国产化系统适配？</li>
+              <li>是否已有 Kubernetes、OpenAI-compatible API 网关、权限系统和日志系统？</li>
+              <li>是否需要模型审计、prompt 日志脱敏、用户权限和知识库权限联动？</li>
+              <li>出现模型错误时，业务流程如何回退到人工？</li>
+            </ul>
+          </div>
+          <div class="card span-6">
+            <h3>采购与竞争</h3>
+            <ul>
+              <li>客户当前在比较什么：消费卡、RTX 工作站卡、Instinct/H 系列、国产 AI 卡，还是云 API？</li>
+              <li>采购目标是最低硬件成本、最快上线、最强性能，还是数据可控？</li>
+              <li>客户是否接受“先 8x W7900D 做本地推理资源池，后续大模型迁移到数据中心 GPU”？</li>
+              <li>POC 成功后预计覆盖多少用户和多少业务系统？</li>
+              <li>是否有明确预算窗口、项目周期和验收责任人？</li>
+            </ul>
+          </div>
+        </div>
+      </section>
+
+      <section id="section-8" class="tool-page" data-page="8" data-title="POC 与验收">
+        <div class="section-kicker">08 / POC Plan and Acceptance</div>
+        <h2>POC 与验收：用客户真实业务测，不用榜单替代验收</h2>
+        <table>
+          <thead>
+            <tr>
+              <th>阶段</th>
+              <th>目标</th>
+              <th>交付物</th>
+              <th>验收口径</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>第 0-2 天</td>
+              <td>环境与硬件确认</td>
+              <td>ROCm、驱动、8 卡可见性、容器、rocm-smi、基础压力测试报告。</td>
+              <td>8 卡可被识别，单卡长稳，温度/功耗无异常降频。</td>
+            </tr>
+            <tr>
+              <td>第 3-5 天</td>
+              <td>主模型服务化</td>
+              <td>Qwen3-32B/GLM/DeepSeek distill 的 vLLM 或 llama.cpp API。</td>
+              <td>OpenAI-compatible API 可调用，基础 prompt、长文摘要、结构化输出通过。</td>
+            </tr>
+            <tr>
+              <td>第 6-8 天</td>
+              <td>RAG 与业务数据接入</td>
+              <td>Embedding/Reranker、知识库切片、引用返回、权限样例。</td>
+              <td>引用命中率、答案可追溯、错答样例可复盘。</td>
+            </tr>
+            <tr>
+              <td>第 9-11 天</td>
+              <td>并发与多模型调度</td>
+              <td>8 卡分配模板、并发压测、P50/P95、显存水位、失败率。</td>
+              <td>达到约定并发和 P95；主模型、检索、VLM/批处理互不抢占。</td>
+            </tr>
+            <tr>
+              <td>第 12-14 天</td>
+              <td>业务验收与上线方案</td>
+              <td>POC 报告、扩容建议、风险清单、生产部署架构。</td>
+              <td>业务方给出 Top 场景通过率，IT 给出可运维性确认。</td>
+            </tr>
+          </tbody>
+        </table>
+        <h3>建议验收指标</h3>
+        <table>
+          <thead><tr><th>类别</th><th>指标</th><th>建议写法</th></tr></thead>
+          <tbody>
+            <tr><td>性能</td><td>Time to First Token、输出 tokens/s、P95 延迟、并发请求数、失败率。</td><td>按模型和上下文长度分别测，不混成一个平均值。</td></tr>
+            <tr><td>显存</td><td>权重显存、KV cache、峰值显存、碎片化、OOM 次数。</td><td>把 8K/16K/32K 上下文分别记录，避免长上下文上线后翻车。</td></tr>
+            <tr><td>质量</td><td>业务问题准确率、引用命中率、幻觉率、人工复核通过率。</td><td>使用客户真实样本，不只跑公开 benchmark。</td></tr>
+            <tr><td>稳定性</td><td>24/48/72 小时服务、温度、降频、进程重启、GPU reset。</td><td>4U 8 卡必须做长稳和热稳定。</td></tr>
+            <tr><td>运维</td><td>模型发布、回滚、日志、审计、权限、离线安装。</td><td>销售报价中明确软件工程边界。</td></tr>
+          </tbody>
+        </table>
+      </section>
+
+      <section id="section-9" class="tool-page" data-page="9" data-title="竞争与异议">
+        <div class="section-kicker">09 / Competitive Positioning and Objections</div>
+        <h2>竞争与异议：诚实定义边界，反而更容易成交</h2>
+        <table>
+          <thead>
+            <tr>
+              <th>对比对象</th>
+              <th>客户为什么会考虑</th>
+              <th>8x W7900D 应对策略</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>消费级 GPU 拼装</td>
+              <td>采购成本低，社区资料多。</td>
+              <td>强调 ECC、专业驱动、整机交付、稳定性、售后和 4U 工程化。不要只比单卡价格。</td>
+            </tr>
+            <tr>
+              <td>RTX 6000 Ada / RTX PRO</td>
+              <td>CUDA 生态成熟，推理引擎支持更强。</td>
+              <td>承认 CUDA 软件生态优势，主打 48GB 显存资源池、ROCm 开源路线、国产客户供应与成本组合；用 POC 把可用性坐实。</td>
+            </tr>
+            <tr>
+              <td>A100/H100/H200</td>
+              <td>高性能、高并发、大模型生产。</td>
+              <td>不要硬碰绝对性能。定位为部门级私有推理和多模型资源池；若客户要 671B 高并发，主动升级方案。</td>
+            </tr>
+            <tr>
+              <td>AMD Instinct MI300/MI325/MI350</td>
+              <td>ROCm 数据中心主线、HBM、大模型优化更完整。</td>
+              <td>W7900D 是成本与本地化入口；Instinct 是大模型和高 SLA 后续升级路线。两者不是互斥，而是分层产品线。</td>
+            </tr>
+            <tr>
+              <td>云 API</td>
+              <td>上线快、免运维、模型强。</td>
+              <td>主打数据不出域、长期成本可控、可私有调优、与内网系统深度集成。可建议云端做质量基准，本地做生产闭环。</td>
+            </tr>
+          </tbody>
+        </table>
+        <h3>常见异议处理</h3>
+        <table>
+          <thead><tr><th>客户异议</th><th>回应话术</th><th>转化动作</th></tr></thead>
+          <tbody>
+            <tr><td>“ROCm 生态不如 CUDA。”</td><td>“这是事实，所以我们不靠口头承诺，而是用客户指定模型、指定数据做 POC。现在 Radeon on Linux 已覆盖 PyTorch、vLLM、llama.cpp、ONNX/MIGraphX 等主流路线，关键是逐模型压测。”</td><td>提供 14 天 POC 清单。</td></tr>
+            <tr><td>“384GB 能不能跑 DeepSeek-R1 全量？”</td><td>“671B 权重和 MoE 通信不是只看激活参数。8x W7900D 可做研究验证，但不建议作为生产承诺。生产建议用 DeepSeek-R1-Distill-32B/70B，或者升级 Instinct/数据中心 GPU。”</td><td>给出蒸馏模型方案和升级路线。</td></tr>
+            <tr><td>“为什么不用 8 张卡跑一个模型？”</td><td>“可以评估 TP/EP，但 W7900D 的商业强项是多模型、多副本、多业务隔离。强行把 8 张卡绑成一个模型，通常会损失并发、稳定性和交付确定性。”</td><td>展示模板 A/B/C。</td></tr>
+            <tr><td>“这是不是数据中心 GPU？”</td><td>“它是 Radeon PRO 路线的本地推理节点，不是 Instinct 替代。我们把它放在部门级私有 AI 和成本可控生产场景，边界说清楚才能稳定交付。”</td><td>区分部门级和数据中心级需求。</td></tr>
+            <tr><td>“能不能 Windows 部署？”</td><td>“开发和演示可以看 Windows/PyTorch，但 8 卡生产推理建议 Linux + ROCm + 容器，这样 vLLM、ONNX、监控和自动化更完整。”</td><td>把操作系统写入 POC 前提。</td></tr>
+          </tbody>
+        </table>
+      </section>
+
+      <section id="section-10" class="tool-page" data-page="10" data-title="配置与扩容">
+        <div class="section-kicker">10 / Configuration and Expansion</div>
+        <h2>配置与扩容：把 8 卡节点卖成可演进的平台</h2>
+        <table>
+          <thead>
+            <tr>
+              <th>配置项</th>
+              <th>建议</th>
+              <th>销售备注</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr><td>GPU</td><td>8x AMD Radeon PRO W7900D，48GB ECC GDDR6/卡。</td><td>强调整机验证，不建议客户自行拼装 8 卡。</td></tr>
+            <tr><td>CPU</td><td>高 PCIe lane 数服务器 CPU，优先 EPYC 级平台。</td><td>确保 8 卡插槽、电气带宽、NUMA、I/O 不成为瓶颈。</td></tr>
+            <tr><td>内存</td><td>建议 512GB 起，RAG/批处理/多模型缓存可上 1TB。</td><td>文档切片、向量库、数据预处理需要系统内存。</td></tr>
+            <tr><td>存储</td><td>系统盘 + NVMe 模型盘 + 数据盘；模型盘建议 4TB 起。</td><td>模型权重、量化版本、向量索引和日志要分层。</td></tr>
+            <tr><td>网络</td><td>25GbE 起，团队共享/集群建议 100GbE。</td><td>内网 API、向量库、对象存储、日志都会消耗网络。</td></tr>
+            <tr><td>系统</td><td>Linux + ROCm + Docker/Compose/Kubernetes 轻量集群。</td><td>把环境固化成可复制交付件。</td></tr>
+            <tr><td>监控</td><td>rocm-smi、Prometheus、日志审计、API 网关。</td><td>销售合同中明确是否包含平台软件实施。</td></tr>
+          </tbody>
+        </table>
+        <h3>扩容路线</h3>
+        <table>
+          <thead><tr><th>阶段</th><th>客户状态</th><th>推荐路线</th></tr></thead>
+          <tbody>
+            <tr><td>样板阶段</td><td>单部门、少量用户、1-2 个场景。</td><td>单台 8x W7900D，主推 RAG/代码/文档。</td></tr>
+            <tr><td>生产阶段</td><td>多部门接入，模型和队列增多。</td><td>多台 8 卡节点，按业务集群拆分，统一 API 网关。</td></tr>
+            <tr><td>高端模型阶段</td><td>客户要 235B/671B/1T 级高并发。</td><td>引导 Instinct/数据中心 GPU；W7900D 节点继续做检索、蒸馏模型、边缘业务。</td></tr>
+          </tbody>
+        </table>
+        <div class="callout">
+          报价建议：硬件报价之外，单独列出“模型部署与 POC 服务包”“RAG/知识库接入服务包”“平台监控与运维服务包”。这样既保护交付边界，也能把项目从硬件采购升级为解决方案销售。
+        </div>
+      </section>
+
+      <section id="section-11" class="tool-page" data-page="11" data-title="销售话术模板">
+        <div class="section-kicker">11 / Sales Messaging Templates</div>
+        <h2>销售话术模板</h2>
+        <h3>30 秒电梯话术</h3>
+        <p>我们这台 4U 8x W7900D 推理服务器，不是为了和云端或数据中心 GPU 硬拼最强大模型，而是帮客户在内网快速建起可生产的 AI 推理资源池。它有 8 张 48GB ECC 显存的专业卡，适合把 Qwen3-32B、DeepSeek 蒸馏模型、GLM、代码模型、Embedding/Reranker、VLM 和批处理任务分开跑，让知识库、代码助手、文档分析、图纸理解这些场景真正多人可用、可审计、可迭代。</p>
+        <h3>给 CIO/IT 负责人的邮件模板</h3>
+        <p>您好，我们建议把 8x W7900D 节点作为贵司私有 AI 推理资源池的第一阶段建设方案。它的重点不是单次跑分，而是在内网承载多模型服务：32B 级 LLM 多副本、Embedding/Reranker、视觉文档模型、代码模型和离线批处理。这样能把数据不出域、模型可控、成本可控和业务系统集成放在同一个平台里。我们建议用 2 周 POC 验证贵司真实知识库、文档、代码或图纸场景，并输出性能、质量、稳定性和扩容建议。</p>
+        <h3>给业务负责人的价值话术</h3>
+        <p>这套节点要解决的是“让员工在内网用上 AI”。比如合同能自动找风险条款，图纸和规范能被问答，代码仓库能做审查和摘要，客服知识库能给出带引用的回答。我们不会只给您展示通用模型聊天，而是用您的真实材料做 POC，看它能不能减少人工检索、整理和复核的时间。</p>
+        <h3>POC 邀约话术</h3>
+        <p>建议我们先选一个最有价值、最容易验收的场景，例如 500 份制度/合同/图纸/代码仓库。我们在 2 周内完成模型部署、知识库接入、并发压测和业务问题评测。验收不看单一榜单，而看四件事：回答是否准确、引用是否可追溯、多人使用是否稳定、上线后人工节省是否明确。</p>
+        <h3>报价收口话术</h3>
+        <p>如果目标是部门级私有 AI 生产，这台 8 卡节点可以先承载 32B 级主力模型和若干业务模型；如果后续要跑 DeepSeek-R1 全量、Kimi K2 或更高并发的大模型服务，我们建议把它作为第一层业务推理资源池，同时规划 Instinct/数据中心 GPU 作为第二阶段扩容。这样投资不会浪费，路径也更稳。</p>
+        <h3>面向算力运营方的话术</h3>
+        <p>在已有 600 台以上 IaaS 集群和运营商高等级 IDC 条件基础上，8x W7900D 节点可以作为推理型资源单元补齐中成本 GPU 供给。销售重点不是从零解释机房、网络和运维能力，而是把现有算力池转化为模型厂商、ISV、科研团队和企业 AI 团队可直接租用的 32B/70B 推理资源、整机裸金属环境、RAG/VLM/代码助手 POC 环境和长期包租资源。</p>
+        <h3>裸金属租赁邀约话术</h3>
+        <p>如果客户需要专属环境做模型适配、私有数据 POC 或短期推理项目，可以直接租用运营商 IDC 内的整台 8x W7900D 裸金属服务器。客户获得独占 GPU、root/容器权限、稳定带宽和远程运维支持，在 14 到 30 天内完成 ROCm、模型、RAG、VLM、业务数据和并发指标验证；后续可转为长期包租或正式采购。</p>
+      </section>
+
+      <section id="section-12" class="tool-page" data-page="12" data-title="IaaS 与裸金属租赁">
+        <div class="section-kicker">12 / IaaS Inference Pool and Bare-Metal Rental</div>
+        <h2>IaaS 与裸金属租赁：把 8 卡节点纳入 600+ 台规模算力运营体系</h2>
+        <div class="callout">
+          <strong>业务思路：</strong>当前已经具备 600 台以上规模的 IaaS 集群，并部署在运营商高等级 IDC 中，机房、电力、网络带宽、远程运维和资源交付条件已经具备。因此 8x W7900D 推理节点的销售逻辑不是“从零建设算力平台”，而是把已有 IaaS 资源池进一步转向 AI 推理工作负载，形成裸金属独占、整卡租赁、RAG/VLM/代码助手 POC 和长期包租资源的可交付业务。
+        </div>
+
+        <h3>一、业务定位：从通用 IaaS 到推理型 IaaS</h3>
+        <table>
+          <thead>
+            <tr>
+              <th>维度</th>
+              <th>已有基础</th>
+              <th>推理节点新增价值</th>
+              <th>销售表达</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>资源规模</td>
+              <td>600 台以上 IaaS 集群，具备批量资源供给、交付和运维基础。</td>
+              <td>可形成多个 8 卡推理节点池，支持整机、整卡和项目包多种交付粒度。</td>
+              <td>“我们不是单台试验服务器，而是已有规模化 IaaS 运营底座的推理算力池。”</td>
+            </tr>
+            <tr>
+              <td>机房与网络</td>
+              <td>运营商高等级 IDC，带宽、机柜、电力、远程访问和基础安全条件已具备。</td>
+              <td>客户不必自建机房即可获得可远程使用的 GPU 裸金属或专属推理环境。</td>
+              <td>“客户租到的是可运营环境中的专属推理资源，不是临时拼装机器。”</td>
+            </tr>
+            <tr>
+              <td>客户转化</td>
+              <td>已有 IaaS 客户和渠道可触达云上开发、测试、部署团队。</td>
+              <td>从 CPU/存储/通用 GPU 需求上探到 LLM 推理、RAG、VLM、代码助手和模型适配需求。</td>
+              <td>“先让客户租起来、跑起来，再转向长期包租或私有化交付。”</td>
+            </tr>
+            <tr>
+              <td>差异定位</td>
+              <td>通用 IaaS 关注机器可用、网络可达、资源计费。</td>
+              <td>推理型 IaaS 还要关注模型能否跑、性能是否达标、ROCm 环境是否固化、业务 POC 是否闭环。</td>
+              <td>“销售从资源交付升级为场景交付，但底层仍由成熟 IaaS 平台保障。”</td>
+            </tr>
+          </tbody>
+        </table>
+
+        <h3>二、客户分层与租赁需求</h3>
+        <table>
+          <thead>
+            <tr>
+              <th>客户类型</th>
+              <th>核心需求</th>
+              <th>推荐交付</th>
+              <th>销售抓手</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>模型厂商/AI 初创</td>
+              <td>模型适配、推理服务验证、开源模型二次开发、Demo 环境。</td>
+              <td>整机裸金属 8 卡包月，或 4 卡/8 卡专属资源池。</td>
+              <td>交付速度、root 权限、稳定带宽、可长期占用、可保留镜像。</td>
+            </tr>
+            <tr>
+              <td>ISV/SI/行业方案商</td>
+              <td>给客户做 RAG、文档智能、代码助手、VLM 项目 POC。</td>
+              <td>7/14/30 天 POC 算力包 + 技术支持 + 可转长期租赁。</td>
+              <td>用租赁降低试错成本，用 POC 结果拉动正式项目。</td>
+            </tr>
+            <tr>
+              <td>企业 AI 团队</td>
+              <td>不想马上采购硬件，但需要验证私有数据和模型部署可行性。</td>
+              <td>整机裸金属短租、RAG 加速包、专属模型适配环境。</td>
+              <td>避免一次性采购风险，验证通过后可迁移到自有机房或继续长期租用裸金属资源。</td>
+            </tr>
+            <tr>
+              <td>高校/科研院所</td>
+              <td>课题组短周期实验、多模型对比、课程平台、论文复现。</td>
+              <td>月度/季度资源池，按项目组分配 1/2/4/8 卡。</td>
+              <td>比自购更快启动，比公共云更可控，支持环境复现。</td>
+            </tr>
+            <tr>
+              <td>渠道与园区服务商</td>
+              <td>服务本地企业 AI 试用、招商、行业 Demo 和联合解决方案。</td>
+              <td>预留节点 + 项目分账 + POC 模板。</td>
+              <td>把已有 IDC 算力变成园区 AI 公共服务能力。</td>
+            </tr>
+          </tbody>
+        </table>
+
+        <h3>三、推荐资源规格与销售口径</h3>
+        <table>
+          <thead>
+            <tr>
+              <th>资源档位</th>
+              <th>资源规格</th>
+              <th>主推模型/负载</th>
+              <th>客户价值</th>
+              <th>销售备注</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>W7900D-1G-48</td>
+              <td>1x W7900D，48GB 显存</td>
+              <td>Qwen3-32B、GLM-4-32B、Embedding/Reranker、VLM 低并发</td>
+              <td>低门槛试用、单模型验证、开发测试。</td>
+              <td>适合获客和模型适配入口，不建议承诺高并发 SLA。</td>
+            </tr>
+            <tr>
+              <td>W7900D-2G-96</td>
+              <td>2x W7900D，96GB 显存</td>
+              <td>主 LLM + Embedding/Reranker，或 70B 量化专家模型</td>
+              <td>部门级小闭环，可跑完整 RAG 流水线。</td>
+              <td>适合企业 POC、ISV Demo 和短周期项目。</td>
+            </tr>
+            <tr>
+              <td>W7900D-4G-192</td>
+              <td>4x W7900D，192GB 显存</td>
+              <td>32B 多副本、代码助手、VLM、离线批处理</td>
+              <td>多模型并行，适合 ISV 和行业 Demo 平台。</td>
+              <td>适合按月包租、项目独占或长期专属资源池。</td>
+            </tr>
+            <tr>
+              <td>W7900D-8G-384 BM</td>
+              <td>8x W7900D，384GB 显存，整机独占</td>
+              <td>企业 AI 推理资源池、70B 专家服务、235B 级研究评估</td>
+              <td>最高隔离、最高可控性、可完整复现客户环境。</td>
+              <td>主打裸金属租赁、长期包租、模型适配和 POC 专用节点。</td>
+            </tr>
+            <tr>
+              <td>RAG Accelerator</td>
+              <td>LLM + Embedding + Reranker + 向量库</td>
+              <td>企业知识库、合同、制度、图纸文档</td>
+              <td>客户购买的是可验证的业务效果，而不只是 GPU 小时。</td>
+              <td>适合销售团队用来提高客单价和续费率。</td>
+            </tr>
+          </tbody>
+        </table>
+
+        <h3>四、运营交付体系：用既有 IDC 与 IaaS 能力降低客户顾虑</h3>
+        <table>
+          <thead>
+            <tr>
+              <th>模块</th>
+              <th>建议能力</th>
+              <th>为什么重要</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>资源隔离</td>
+              <td>优先整卡/整机分配；重要客户使用裸金属独占；共享池用容器、命名空间、网络隔离和配额限制。</td>
+              <td>W7900D 不应按 NVIDIA MIG 的细粒度隔离思路销售，避免噪声邻居和安全边界争议。</td>
+            </tr>
+            <tr>
+              <td>调度平台</td>
+              <td>Kubernetes/Slurm/自研门户三选一；对外暴露项目、GPU 配额、镜像、存储和远程访问入口。</td>
+              <td>把 600+ 台 IaaS 集群中的推理节点纳入统一资源池，而不是人工分配账号。</td>
+            </tr>
+            <tr>
+              <td>推理服务层</td>
+              <td>vLLM、llama.cpp、SGLang 评估栈、ONNX/MIGraphX；提供标准镜像、启动脚本和客户自部署 API 模板。</td>
+              <td>降低客户自部署成本，方便客户在独占资源上复现模型服务。</td>
+            </tr>
+            <tr>
+              <td>计量计费</td>
+              <td>GPU-hour、node-hour、存储、出入流量、模型部署服务分项记录。</td>
+              <td>支撑短租、包月、项目独占、内部成本分摊和渠道分账。</td>
+            </tr>
+            <tr>
+              <td>监控运维</td>
+              <td>GPU 温度/功耗/显存、推理任务 P95、错误率、重启、模型版本、客户账单和审计日志。</td>
+              <td>利用 IDC 现有运维体系，补齐推理服务层的质量指标和故障响应。</td>
+            </tr>
+            <tr>
+              <td>镜像与模型库</td>
+              <td>提供 ROCm 基础镜像、vLLM 镜像、常用模型量化版本、RAG 模板和 Demo 数据集。</td>
+              <td>缩短客户从租用到跑通模型的时间，提高资源利用率。</td>
+            </tr>
+          </tbody>
+        </table>
+
+        <h3>五、收入模式与定价思路</h3>
+        <table>
+          <thead>
+            <tr>
+              <th>模式</th>
+              <th>适用场景</th>
+              <th>收入构成</th>
+              <th>关键控制点</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>纯裸金属租赁</td>
+              <td>客户有强技术团队，只要独占 GPU 服务器。</td>
+              <td>整机月租/季租/年租 + 存储/带宽 + 押金/服务级别。</td>
+              <td>明确客户自管软件，平台方保障硬件、网络、电力、基础镜像和远程控制。</td>
+            </tr>
+            <tr>
+              <td>POC 算力包</td>
+              <td>售前验证、模型适配、行业 Demo。</td>
+              <td>7/14/30 天套餐 + 技术支持包；成交后租金抵扣采购款。</td>
+              <td>最适合拉动企业客户试用、ISV 项目验证和后续长期租赁，验收项必须前置。</td>
+            </tr>
+            <tr>
+              <td>渠道联合销售</td>
+              <td>渠道服务本地企业、园区服务入驻企业、SI 服务行业项目。</td>
+              <td>资源租赁收入 + 运维服务收入 + 项目实施收入 + 长期包租收入。</td>
+              <td>渠道负责获客和场景识别，平台方负责资源交付、镜像、模型和运维标准化。</td>
+            </tr>
+            <tr>
+              <td>企业内部 IaaS</td>
+              <td>集团 IT 给各业务部门分摊算力成本。</td>
+              <td>内部成本分摊、项目配额、部门包月。</td>
+              <td>核心是门户、配额、日志、权限和成本可视化。</td>
+            </tr>
+          </tbody>
+        </table>
+        <div class="callout">
+          <strong>定价底线：</strong>在已有 IDC 和 IaaS 集群条件下，价格不应只按 GPU 小时理论满载倒推。月度底价仍应覆盖硬件折旧、资金成本、电费、机柜/带宽、运维人工、备件、闲置率和目标毛利。简化口径可写成：最低月租 =（月折旧 + 月电费 + IDC 成本 + 运维成本 + 风险准备）/ 目标利用率 + 毛利。
+        </div>
+
+        <h3>六、销售支撑工具：从“有资源”到“能成交”</h3>
+        <table>
+          <thead>
+            <tr>
+              <th>工具</th>
+              <th>内容</th>
+              <th>用途</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>资源规格单</td>
+              <td>1/2/4/8 卡资源、显存、推荐模型、镜像版本、网络、存储、交付周期。</td>
+              <td>让客户快速判断是否满足模型和项目需求。</td>
+            </tr>
+            <tr>
+              <td>模型适配清单</td>
+              <td>Qwen3-32B、DeepSeek distill、GLM-4、Qwen3-Coder、Qwen2.5-VL、Embedding/Reranker 等推荐组合。</td>
+              <td>避免客户只问“能不能跑 DeepSeek 全量”，把需求导向可交付模型。</td>
+            </tr>
+            <tr>
+              <td>POC 套餐</td>
+              <td>7/14/30 天算力、基础镜像、技术支持、验收项、是否可抵扣后续租赁或采购。</td>
+              <td>降低客户首次决策门槛，提高转长期租赁概率。</td>
+            </tr>
+            <tr>
+              <td>SLA 与边界说明</td>
+              <td>硬件可用性、网络、远程支持、镜像责任、模型质量责任、数据责任、故障响应。</td>
+              <td>避免把裸金属租赁误解成完整 AI 应用项目交付。</td>
+            </tr>
+            <tr>
+              <td>算力利用率看板</td>
+              <td>节点占用率、GPU-hour、客户留存、闲置资源、故障统计。</td>
+              <td>支撑销售跟进、续费、扩容和价格调整。</td>
+            </tr>
+          </tbody>
+        </table>
+
+        <h3>七、推荐话术与风险边界</h3>
+        <table>
+          <thead>
+            <tr>
+              <th>场景</th>
+              <th>推荐话术</th>
+              <th>风险边界</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>面向模型厂商/AI 初创</td>
+              <td>“我们已有 600 台以上 IaaS 集群和运营商 IDC 条件，可以提供整机独占的 8 卡 W7900D 裸金属资源，适合模型适配、推理服务验证和 Demo 环境长期占用。”</td>
+              <td>明确 W7900D 适合 32B/70B 推理和部分大模型评估，不承诺替代高端 HBM 数据中心 GPU。</td>
+            </tr>
+            <tr>
+              <td>面向 ISV/SI</td>
+              <td>“你们不用先买设备，可以先租用 14-30 天完成客户 POC；项目落地后可转长期租赁或交付同规格节点。”</td>
+              <td>明确模型协议、客户数据责任、验收指标和技术支持范围。</td>
+            </tr>
+            <tr>
+              <td>面向终端企业</td>
+              <td>“如果暂时不想采购硬件，可以先在运营商 IDC 的专属裸金属节点上跑真实数据，验证通过后再决定采购或长期租用裸金属资源。”</td>
+              <td>POC 的性能、质量、上线范围、数据安全和费用抵扣规则要写清楚。</td>
+            </tr>
+            <tr>
+              <td>面向渠道/园区</td>
+              <td>“我们提供已具备规模和网络条件的推理算力底座，你们负责客户场景识别和项目推进，双方共同把 AI 试用转化为长期算力租赁或私有化交付。”</td>
+              <td>要限制免费试用周期和资源配额，避免低质量需求长期占用资源。</td>
+            </tr>
+          </tbody>
+        </table>
+        <div class="callout warn">
+          不建议把 W7900D 8 卡资源描述为“任意大模型高并发云”。更稳的市场定位是：已有 600+ 台 IaaS 集群中的推理型资源池，重点承接独占裸金属、32B/70B 推理、RAG/VLM/代码助手、短租 POC 和长期包租。
+        </div>
+      </section>
+
+      <section id="section-13" class="tool-page" data-page="13" data-title="来源与核验">
+        <div class="section-kicker">13 / Sources and Validation Notes</div>
+        <h2>来源与核验</h2>
+        <p>本文件的规格、ROCm 支持和模型参数/benchmark 参考来自公开官方页面和模型卡。不同框架版本、驱动版本、量化格式、上下文长度、batch 策略、温度参数和提示词都会影响实际结果，正式项目必须用客户数据做 POC。</p>
+        <table>
+          <thead><tr><th>来源</th><th>用途</th></tr></thead>
+          <tbody>
+            <tr><td><a href="https://www.amd.com/zh-cn/products/graphics/workstations/radeon-pro/w7900d.html">AMD Radeon PRO W7900D 中国官网</a></td><td>W7900D 官方规格：48GB GDDR6、ECC、FP16/INT8/INT4 峰值、295W、PCIe 4.0、Triple Slot。</td></tr>
+            <tr><td><a href="https://rocm.docs.amd.com/projects/radeon/en/latest/docs/compatibility.html">ROCm on Radeon and Ryzen</a></td><td>Radeon Linux/Windows 支持框架、Radeon on Linux 的 PyTorch、vLLM、llama.cpp、ONNX/MIGraphX 等生态说明。</td></tr>
+            <tr><td><a href="https://docs.vllm.ai/en/stable/getting_started/installation/gpu.html?device=rocm">vLLM ROCm 安装文档</a></td><td>vLLM AMD ROCm 版本、预构建 wheel 和 Linux 支持边界。</td></tr>
+            <tr><td><a href="https://docs.aws.amazon.com/ec2/latest/instancetypes/ec2-nitro-instances.html">AWS EC2 Nitro/Bare Metal 文档</a></td><td>裸金属实例的市场表达参考：客户可获得底层服务器资源，适合说明“整机独占”的产品逻辑。</td></tr>
+            <tr><td><a href="https://aws.amazon.com/ec2/instance-types/g6e/">AWS EC2 G6e 实例页面</a></td><td>GPU IaaS 通用参考：面向 LLM 推理、视觉、图形和模型服务的 GPU 实例表达。</td></tr>
+            <tr><td><a href="https://lambda.ai/cloud">Lambda Cloud 产品页</a>、<a href="https://docs.lambda.ai/private-cloud">Lambda Private Cloud 文档</a></td><td>GPU 云、按需/预留资源、单租户私有云和长期租赁表达参考。</td></tr>
+            <tr><td><a href="https://huggingface.co/Qwen/Qwen3-32B">Qwen3-32B 模型卡</a>、<a href="https://huggingface.co/Qwen/Qwen3-30B-A3B">Qwen3-30B-A3B 模型卡</a></td><td>Qwen3 32B/30B-A3B 参数、协议和 benchmark 参考。</td></tr>
+            <tr><td><a href="https://huggingface.co/deepseek-ai/DeepSeek-R1">DeepSeek-R1 模型卡</a></td><td>DeepSeek-R1 671B/37B active、蒸馏模型、benchmark 和 MIT 协议说明。</td></tr>
+            <tr><td><a href="https://huggingface.co/Qwen/Qwen3-235B-A22B-Thinking-2507">Qwen3-235B-A22B-Thinking-2507 模型卡</a></td><td>235B 总参数、22B 激活、262K 上下文、vLLM/SGLang 示例和 benchmark 参考。</td></tr>
+            <tr><td><a href="https://huggingface.co/Qwen/Qwen3-Coder-480B-A35B-Instruct">Qwen3-Coder-480B-A35B-Instruct 模型卡</a></td><td>480B/35B active 代码模型定位、协议和长上下文能力。</td></tr>
+            <tr><td><a href="https://huggingface.co/moonshotai/Kimi-K2-Instruct">Kimi-K2-Instruct 模型卡</a></td><td>1T/32B active、128K 上下文、Modified MIT 和 benchmark 参考。</td></tr>
+            <tr><td><a href="https://huggingface.co/zai-org/GLM-4-32B-0414">GLM-4-32B-0414 模型卡</a>、<a href="https://huggingface.co/mistralai/Mistral-Small-3.2-24B-Instruct-2506">Mistral Small 3.2 模型卡</a>、<a href="https://huggingface.co/microsoft/phi-4">Phi-4 模型卡</a></td><td>Agent、国际化、代码/数学场景的备选模型与 benchmark 参考。</td></tr>
+            <tr><td><a href="https://huggingface.co/Qwen/Qwen3-Embedding-8B">Qwen3-Embedding-8B 模型卡</a>、<a href="https://huggingface.co/BAAI/bge-m3">BGE-M3 模型卡</a></td><td>RAG 检索组件、MTEB/多语言能力和协议参考。</td></tr>
+          </tbody>
+        </table>
+        <div class="callout warn">
+          销售版本建议保留这一页。它可以帮助团队在客户追问“数据从哪里来”“能否保证性能”时，把公开 benchmark 和真实 POC 的边界讲清楚。
+        </div>
+      </section>
+    </main>
+
+    <footer>
+      说明：本 HTML 为独立 Sales Tools 文件，围绕 4U 8x W7900D 384GB 本地推理节点、IaaS 推理资源池与裸金属租赁业务重构。浏览器内编辑不会自动写回磁盘，正式改稿请直接编辑此文件。
+    </footer>
+  </div>
+  <script>
+    (() => {
+      const sections = Array.from(document.querySelectorAll(".tool-page"));
+      const navLinks = Array.from(document.querySelectorAll("nav a"));
+      const prevButton = document.querySelector("[data-prev]");
+      const nextButton = document.querySelector("[data-next]");
+      const modeButton = document.querySelector("[data-mode-toggle]");
+      const pageStatus = document.querySelector("[data-page-status]");
+      const pageTitle = document.querySelector("[data-page-title]");
+      let current = 0;
+      let paged = true;
+
+      function indexFromHash() {
+        const match = window.location.hash.match(/^#section-(\d+)$/);
+        if (!match) return 0;
+        const index = Number(match[1]) - 1;
+        return Number.isFinite(index) ? Math.max(0, Math.min(sections.length - 1, index)) : 0;
+      }
+
+      function setPage(index, updateHash = true, shouldScroll = true) {
+        current = Math.max(0, Math.min(sections.length - 1, index));
+        sections.forEach((section, idx) => {
+          section.classList.toggle("active", idx === current);
+        });
+        navLinks.forEach((link, idx) => {
+          link.classList.toggle("active", idx === current);
+          link.setAttribute("aria-current", idx === current ? "page" : "false");
+        });
+        pageStatus.textContent = (current + 1) + " / " + sections.length;
+        pageTitle.textContent = sections[current]?.dataset.title || "";
+        prevButton.disabled = current === 0;
+        nextButton.disabled = current === sections.length - 1;
+        if (updateHash) {
+          const targetHash = "#section-" + (current + 1);
+          if (window.location.hash !== targetHash) {
+            history.replaceState(null, "", targetHash);
+          }
+        }
+        if (shouldScroll) {
+          if (paged) {
+            document.querySelector(".pager-toolbar").scrollIntoView({ behavior: "smooth", block: "start" });
+          } else {
+            sections[current].scrollIntoView({ behavior: "smooth", block: "start" });
+          }
+        }
+      }
+
+      function setMode(nextPaged, syncPage = true) {
+        paged = nextPaged;
+        document.body.classList.toggle("paged-mode", paged);
+        document.body.classList.toggle("continuous-mode", !paged);
+        modeButton.textContent = paged ? "连续模式" : "分页模式";
+        modeButton.setAttribute("aria-pressed", String(!paged));
+        localStorage.setItem("w7900d8GpuSalesToolsPaged", paged ? "1" : "0");
+        if (syncPage) setPage(current, true, false);
+      }
+
+      navLinks.forEach((link, idx) => {
+        link.addEventListener("click", (event) => {
+          event.preventDefault();
+          setPage(idx, true, true);
+        });
+      });
+      prevButton.addEventListener("click", () => setPage(current - 1));
+      nextButton.addEventListener("click", () => setPage(current + 1));
+      modeButton.addEventListener("click", () => setMode(!paged));
+      window.addEventListener("hashchange", () => setPage(indexFromHash(), false, true));
+      window.addEventListener("keydown", (event) => {
+        if (!paged || event.altKey || event.ctrlKey || event.metaKey || event.shiftKey) return;
+        if (event.key === "ArrowLeft" && current > 0) setPage(current - 1);
+        if (event.key === "ArrowRight" && current < sections.length - 1) setPage(current + 1);
+      });
+
+      const savedMode = localStorage.getItem("w7900d8GpuSalesToolsPaged");
+      current = indexFromHash();
+      setMode(savedMode !== "0", false);
+      setPage(indexFromHash(), false, false);
+    })();
+  </script>
+</body>
+</html>
