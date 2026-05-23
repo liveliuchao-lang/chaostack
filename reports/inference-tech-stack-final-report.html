@@ -1,0 +1,497 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>大模型推理技术栈全景分析 — 最终统一报告</title>
+<style>
+:root{--bg:#fff;--fg:#1a1a2e;--acc:#2563eb;--acc-l:#dbeafe;--bdr:#e2e8f0;--mu:#64748b;--gn:#16a34a;--gn-l:#dcfce7;--am:#d97706;--am-l:#fef3c7;--rd:#dc2626;--rd-l:#fee2e2;--pu:#7c3aed;--pu-l:#ede9fe;--amd:#ED1C24;--amd-l:#fef2f2;--nv:#76B900;--nv-l:#f7fee7;--r:8px;--sh:0 1px 3px rgba(0,0,0,.08);color-scheme:light}
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC","Microsoft YaHei",sans-serif;background:var(--bg);color:var(--fg);line-height:1.8;font-size:15px}
+.container{max-width:1200px;margin:0 auto;padding:40px 32px}
+.report-header{border-bottom:3px solid var(--acc);padding-bottom:28px;margin-bottom:36px}
+.report-header .meta{color:var(--mu);font-size:13px}
+.report-header h1{font-size:30px;font-weight:800;margin:6px 0}
+.report-header .subtitle{font-size:15px;color:var(--mu)}
+.badge-row{display:flex;gap:10px;flex-wrap:wrap;margin-top:14px}
+.badge{display:inline-block;padding:4px 14px;border-radius:999px;font-size:12px;font-weight:500;border:1px solid var(--bdr)}
+.badge.r{background:var(--amd-l);color:var(--amd);border-color:var(--amd)}
+.badge.b{background:var(--acc-l);color:var(--acc);border-color:var(--acc)}
+.badge.g{background:var(--nv-l);color:var(--nv);border-color:var(--nv)}
+.badge.p{background:var(--pu-l);color:var(--pu);border-color:var(--pu)}
+.exec-summary{background:linear-gradient(135deg,#f8fafc,#f0f9ff);border-left:4px solid var(--acc);padding:24px 28px;border-radius:var(--r);margin-bottom:36px;box-shadow:var(--sh)}
+.exec-summary h2{font-size:18px;color:var(--acc);margin-bottom:12px}
+section{margin-bottom:40px}
+section h2{font-size:22px;font-weight:700;margin-bottom:16px;padding-bottom:8px;border-bottom:2px solid var(--bdr)}
+section h3{font-size:17px;font-weight:600;margin:20px 0 10px;color:#334155}
+section h4{font-size:14px;font-weight:600;color:var(--acc);margin:14px 0 6px}
+.card{background:#fff;border:1px solid var(--bdr);border-radius:var(--r);padding:22px 28px;box-shadow:var(--sh);margin-bottom:18px}
+.card.al{border-left:4px solid var(--amd)}
+.card.bl{border-left:4px solid var(--acc)}
+.card.gl{border-left:4px solid var(--nv)}
+.card-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(340px,1fr));gap:18px}
+table{width:100%;border-collapse:collapse;margin:12px 0 20px;font-size:13px}
+th,td{border:1px solid var(--bdr);padding:8px 12px;text-align:left}
+th{background:#f8fafc;font-weight:600;font-size:12px;color:var(--mu);text-transform:uppercase}
+tr:hover{background:#fafbfc}
+.cl{font-weight:600;background:#fafbfc}
+.hb{padding:14px 18px;border-radius:var(--r);margin:12px 0;font-size:14px;border-left:4px solid}
+.hb.b{background:var(--acc-l);border-color:var(--acc)}
+.hb.r{background:var(--amd-l);border-color:var(--amd)}
+.hb.g{background:var(--nv-l);border-color:var(--nv)}
+.hb.a{background:var(--am-l);border-color:var(--am)}
+.mr{display:flex;align-items:center;padding:10px 0;border-bottom:1px solid var(--bdr);gap:16px}
+.mr .domain{min-width:210px;font-weight:600;font-size:14px}
+.mr .bw{flex:1;background:#f1f5f9;border-radius:999px;height:12px;overflow:hidden}
+.mr .bar{height:100%;border-radius:999px}
+.mr .level{min-width:60px;text-align:right;font-size:13px;color:var(--mu)}
+.tags{display:flex;flex-wrap:wrap;gap:6px;margin:8px 0}
+.tag{display:inline-block;padding:3px 10px;border-radius:999px;font-size:12px;font-weight:500;background:#f1f5f9;color:var(--fg);border:1px solid var(--bdr)}
+.tag.g{background:var(--gn-l);color:#15803d;border-color:#bbf7d0}
+.tag.b{background:var(--acc-l);color:#1d4ed8;border-color:#bfdbfe}
+.tag.r{background:var(--amd-l);color:var(--amd);border-color:#fecaca}
+.tag.p{background:var(--pu-l);color:#6d28d9;border-color:#ddd6fe}
+.tl{position:relative;padding-left:30px;margin:16px 0}
+.tl-item{position:relative;padding:8px 0 8px 20px;border-left:2px solid var(--amd);margin-bottom:8px}
+.tl-item::before{content:'';position:absolute;left:-6px;top:14px;width:10px;height:10px;border-radius:50%;background:var(--amd)}
+.tl-item .date{font-size:12px;color:var(--mu);font-weight:600}
+.tl-item .desc{font-size:14px;margin-top:2px}
+.fn{font-size:13px;color:var(--mu);border-top:1px solid var(--bdr);padding-top:16px;margin-top:40px}
+@media print{body{font-size:12px}.container{max-width:100%;padding:20px}}
+</style>
+</head>
+<body>
+<div class="container">
+
+<!-- HEADER -->
+<div class="report-header">
+<div class="meta">最终统一整合报告 · 2026年5月22日 · vFinal</div>
+<h1>大模型推理技术栈全景分析报告</h1>
+<div class="subtitle">推理技术栈分层架构 · 性能工程体系 · CUDA/ROCm 双生态对标 · AMD Radeon PRO 工作站 PCIe GPU 推理能力全景</div>
+<div class="badge-row">
+<span class="badge g">NVIDIA CUDA (H100/B200/RTX PRO)</span><span class="badge r">AMD ROCm 7.2 + Radeon PRO</span>
+<span class="badge r">W6800/W7800/W7900/W7900D/R9700/R9700S/R9600D</span><span class="badge p">国产加速卡</span>
+</div>
+</div>
+
+<!-- EXECUTIVE SUMMARY -->
+<div class="exec-summary">
+<h2>报告概述</h2>
+<p>本报告为<strong>大模型推理技术栈的统一整合最终版本</strong>，融合了此前全部研究工作的核心成果。报告系统性地从<strong>六个抽象层次</strong>（硬件层→微架构层→运行时层→算子层→推理引擎层→应用服务层）解析推理技术栈的完整图景，深度对比<strong>NVIDIA CUDA</strong>与<strong>AMD ROCm</strong>两大生态在推理领域的能力矩阵，并首次完整呈现<strong>AMD Radeon PRO 工作站 PCIe GPU 七款产品</strong>（W6800→W7800→W7900→W7900D→R9700→R9700S→R9600D）的推理能力全景分析。</p>
+<p style="margin-top:8px">报告覆盖：① 推理技术栈六层架构及每层技术组成 ② Tensor Core vs WMMA 微架构级对比 ③ 跨平台推理性能工程四阶段方法论 ④ vLLM/SGLang/TensorRT-LLM 引擎架构对比 ⑤ NVIDIA Nsight vs AMD ROCm Profiler vs 国产 PMU/PMC 三平台工具链 ⑥ PCIe 工作站 GPU 推理能力矩阵与选型指南 ⑦ 推理工程师五维能力模型与四级发展路线。</p>
+<p style="font-size:13px;color:var(--mu);margin-top:8px">所有技术参数均基于 2025–2026 年公开资料（AMD 官方产品页、ROCm 文档、ISSCC 2026、MLSys 论文、vLLM/SGLang 社区数据）交叉验证。</p>
+</div>
+
+<!-- ====== CH1: SIX LAYERS ====== -->
+<section>
+<h2>第1章 推理技术栈六层分层架构</h2>
+
+<div class="card bl">
+<h3>1.1 从硬件到应用的全栈视图</h3>
+<p>大模型推理系统可以清晰地划分为六个抽象层次。理解这个分层架构是构建系统性推理优化能力的基石。每一层都有独立的技术栈、工具链和优化方法论，各层之间通过明确接口协作。一个推理工程师的"深度"取决于能贯通几层，"宽度"取决于能覆盖几个平台。</p>
+<table>
+<thead><tr><th>层次</th><th>名称</th><th>核心职责</th><th>NVIDIA 代表技术</th><th>AMD ROCm 代表技术</th><th>国产平台</th></tr></thead>
+<tr>
+<td class="cl">L6</td><td><strong>应用与服务层</strong></td>
+<td>API 网关 · 负载均衡 · KV-Aware 路由 · 弹性伸缩 · SLA 保障 · 多租户 · 监控告警</td>
+<td>NVIDIA Dynamo · KServe · Triton Inference Server</td>
+<td>AMD Inference Microservices (AIM) · Dynamo ROCm port</td>
+<td>国产编排平台 · 定制 API 网关</td>
+</tr>
+<tr>
+<td class="cl">L5</td><td><strong>推理引擎层</strong></td>
+<td>请求调度 · 批处理策略 · 并行策略编排 (TP/PP/DP/EP) · KV Cache 管理 · 显存管理 · 前缀缓存 · 模型加载 · Tokenizer · 量化部署</td>
+<td>vLLM · SGLang · TensorRT-LLM · llama.cpp · LMDeploy</td>
+<td>vLLM ROCm (First-Class) · SGLang ROCm · llama.cpp ROCm</td>
+<td>框架级定制移植 (vLLM/PyTorch 适配)</td>
+</tr>
+<tr>
+<td class="cl">L4</td><td><strong>算子与计算库层</strong></td>
+<td>Attention Kernel · GEMM Kernel · 通信算子 · Sampling · 量化反量化 · Activation · LayerNorm/RMSNorm · MoE Routing · 算子融合</td>
+<td>FlashInfer · FlashAttention 3/4 · CUTLASS 4.3 · cuBLASLt · NCCL · cuDNN</td>
+<td>FlashInfer ROCm · FA2/3 ROCm · Composable Kernel · hipBLASLt · RCCL · MIOpen · <strong>WMMA v2</strong></td>
+<td>平台 BLAS · 定制 Attention · 通信库适配</td>
+</tr>
+<tr>
+<td class="cl">L3</td><td><strong>编程模型与运行时层</strong></td>
+<td>GPU Runtime API · Stream/Event 管理 · CUDA Graph · MPS/MIG 分区 · 内存池 · 统一内存 · 框架运行时</td>
+<td>CUDA 12.x Runtime · CUDA Graphs · MIG · MPS · PyTorch CUDA Backend</td>
+<td>HIP 7.0 Runtime · ROCm HIP Graphs · PyTorch ROCm Backend · torch.compile (ROCm)</td>
+<td>国产加速卡 SDK · HIP 兼容层 · 框架后端适配</td>
+</tr>
+<tr>
+<td class="cl">L2</td><td><strong>微架构与编译器层</strong></td>
+<td>ISA 指令集 · Tensor Core / Matrix Core 调度 · Warp / Wavefront 调度 · 寄存器分配 · Shared Memory / LDS · L1/L2 Cache · TMA · NVLink / XGMI 拓扑</td>
+<td>PTX (虚拟 ISA) · SASS (机器 ISA) · nvcc · ptxas · Tensor Core MMA 指令 · TMA 硬件单元</td>
+<td>AMD GPU ISA · hipcc (Clang-based) · <strong>WMMA v1/v2 指令</strong> · SPIR-V · RDNA ISA · LLVM 后端</td>
+<td>申威 SW64 ISA · 国产加速卡指令集 · 交叉编译工具链</td>
+</tr>
+<tr>
+<td class="cl">L1</td><td><strong>硬件层</strong></td>
+<td>GPU Die · HBM 显存 · Tensor Core / Matrix Core · NVSwitch · Infinity Fabric · PCIe 总线 · 网络互连</td>
+<td>H100/H200/B200 (Hopper/Blackwell) · RTX 6000 Ada · RTX PRO 5000</td>
+<td><strong>W6800/W7800/W7900/W7900D (RDNA2/3) · R9700/R9700S/R9600D (RDNA4)</strong> · MI300X/MI355X (CDNA3/4)</td>
+<td>昇腾 910B · 天数智芯 · 申威 SW</td>
+</tr>
+</table>
+</div>
+
+<div class="card bl">
+<h3>1.2 核心推理性能指标体系</h3>
+<table>
+<thead><tr><th>指标</th><th>英文</th><th>定义</th><th>优化目标</th><th>关键依赖层</th></tr></thead>
+<tr><td class="cl">首 Token 延迟</td><td><strong>TTFT</strong> (Time To First Token)</td><td>请求到达 → 第一个 token 生成完成</td><td>&lt;100ms (实时交互) / &lt;2s (批量)</td><td>L1-L5</td></tr>
+<tr><td class="cl">每 Token 输出延迟</td><td><strong>TPOT</strong> (Time Per Output Token)</td><td>每个 decode 步骤的平均耗时 (含调度)</td><td>&lt;20ms (单请求) / &lt;50ms (高并发)</td><td>L1-L4</td></tr>
+<tr><td class="cl">Token 间延迟</td><td><strong>ITL</strong> (Inter-Token Latency)</td><td>连续 token 之间的间隔 (流式体验)</td><td>P99 &lt;50ms</td><td>L2-L5</td></tr>
+<tr><td class="cl">吞吐量</td><td><strong>Throughput</strong></td><td>每秒生成的全部 token 总数</td><td>最大化 (批处理场景)</td><td>L1-L6</td></tr>
+<tr><td class="cl">计算利用率</td><td><strong>SM Util / SOL</strong></td><td>实测计算吞吐 / 理论峰值 (Speed of Light)</td><td>Prefill &gt;80% · Decode &gt;30% (内存带宽瓶颈)</td><td>L2</td></tr>
+<tr><td class="cl">显存利用率</td><td><strong>Memory Util</strong></td><td>已使用显存 / 总显存 · KV Cache 碎片率</td><td>85%–95% (充分但不溢出)</td><td>L1+L5</td></tr>
+</table>
+</div>
+</section>
+
+<!-- ====== CH2: LAYER-BY-LAYER ====== -->
+<section>
+<h2>第2章 各层技术栈详细组成与分析</h2>
+
+<div class="card bl">
+<h3>2.1 L2 微架构层 — Tensor Core (NVIDIA) vs WMMA (AMD) 深度对比</h3>
+<p>这是决定 GPU 推理性能上限的硬件基础。NVIDIA 和 AMD 在矩阵计算硬件上走上了不同的路径，但 2025 年的 RDNA4 WMMA v2 已经大幅缩小了差距。</p>
+<table>
+<thead><tr><th>微架构维度</th><th>NVIDIA Hopper H100 (SM90)</th><th>AMD RDNA3 W7900 (gfx1100)</th><th>AMD RDNA4 R9700 (gfx1201)</th></tr></thead>
+<tr><td class="cl">矩阵指令集</td><td>PTX MMA / SASS Warp-Group MMA (WGMMA)</td><td>WMMA v1 (MFMA) — VGPR 布局复杂, 需跨 lane shuffle</td><td><strong>WMMA v2 — VGPR 简化, 无数据复制, 无跨 lane shuffle</strong></td></tr>
+<tr><td class="cl">FP16 矩阵吞吐 (每CU/时钟)</td><td>1024 ops (mma.sync 16×8×16)</td><td>512 ops (WMMA v1)</td><td><strong>1024 ops (WMMA v2 — 2× RDNA3)</strong></td></tr>
+<tr><td class="cl">INT8 矩阵吞吐 (每CU/时钟)</td><td>2048 ops</td><td>512 ops (WMMA v1，借助 dual-issue 可达 ~1024)</td><td><strong>2048 ops (WMMA v2 — 4× RDNA3 基础速率)</strong></td></tr>
+<tr><td class="cl">FP8/BF8 原生支持</td><td>✅ Hopper 原生 FP8 E4M3/E5M2</td><td>❌ 不支持</td><td><strong>✅ 原生 FP8/BF8 — 首次在工作站/Pro 级别</strong></td></tr>
+<tr><td class="cl">4:2 结构化稀疏</td><td>✅ 有效吞吐 ×2</td><td>❌ 不支持</td><td><strong>✅ 支持 — INT4+稀疏 达 1,531 TOPS</strong></td></tr>
+<tr><td class="cl">TMA (异步张量拷贝)</td><td>✅ TMA — 独立于 CUDA Core 的硬件单元</td><td>❌ 无等效硬件 (依赖 LDS+Wavefront 软件调度)</td><td>❌ 无等效硬件 (但 LDS 扩充至 160KB)</td></tr>
+<tr><td class="cl">Warp/Wavefront 粒度</td><td>Warp Size = 32</td><td>Wavefront Size = <strong>64</strong></td><td>Wavefront Size = <strong>64</strong> (兼容性关键差异)</td></tr>
+<tr><td class="cl">Thread Block Cluster</td><td>✅ SM 间协作 (H100 最大 16 SM)</td><td>❌ (XCD 间通过 Infinity Fabric)</td><td>❌ (DCU 间通过 IF)</td></tr>
+<tr><td class="cl">寄存器管理</td><td>静态分配 (per-thread 最大 255)</td><td>静态分配</td><td><strong>动态寄存器池 — 按需申请/释放, 改善 Occupancy</strong></td></tr>
+</table>
+
+<div class="hb r">
+<strong>关键认知：</strong> NVIDIA Hopper 的 TMA + Thread Block Cluster + WGMMA 组合在 Attention 等对数据搬运敏感的 kernel 上仍具有架构级优势（FlashAttention 3/4 的 5 路 Warp Specialization 深度依赖 TMA）。AMD RDNA4 的 WMMA v2 通过简化 VGPR 布局和增加动态寄存器管理，在 kernel 开发效率和通用矩阵性能上大幅改善，但缺乏 TMA 等效硬件意味着 Attention kernel 在 RDNA 上的峰值性能仍受限于数据搬运效率。<strong>这是 ROCm 版本的 FlashAttention 目前仅支持到 FA2/FA3 (Triton-based)、不支持 FA4 的根因</strong>。
+</div>
+</div>
+
+<div class="card bl">
+<h3>2.2 L4 算子层 — 推理核心算子技术栈</h3>
+<table>
+<thead><tr><th>算子类别</th><th>推理阶段</th><th>计算特征</th><th>NVIDIA 最优实现</th><th>AMD ROCm 最优实现</th><th>国产平台</th></tr></thead>
+<tr><td class="cl"><strong>PreFill Attention</strong></td><td>Prefill</td><td>Compute-bound (200-400 ops/byte)<br>O(n²) 复杂度 · 并行度高</td><td>FlashAttention 4 (SM100)<br>FA3 (SM90)</td><td>FA2/FA3 (Triton-based, 非 CK 优化)</td><td>定制 Attention kernel</td></tr>
+<tr><td class="cl"><strong>Decode Attention</strong></td><td>Decode</td><td>Memory-bound (60-80 ops/byte)<br>每 token ×1 KV 向量读取</td><td>FlashInfer PageAttention<br>FlashInfer FPSAGe (Head-group packing)</td><td>FlashInfer ROCm (fa2/ck 后端)</td><td>自研 Page Table 管理</td></tr>
+<tr><td class="cl"><strong>GEMM (Prefill)</strong></td><td>Prefill</td><td>Compute-bound · 高算术强度<br>典型 shape: 4096×4096×8192</td><td>CUTLASS 4.3 + DeepGEMM<br>nvMatmulHeuristics 自动调优</td><td>hipBLASLt (ROCm 7.2 大规模增强)<br>Composable Kernel</td><td>厂商 BLAS 库</td></tr>
+<tr><td class="cl"><strong>GEMM (Decode)</strong></td><td>Decode</td><td>小 batch × 大 hidden dim<br>SM-constrained · launch overhead 敏感</td><td>FlashInfer SM-constrained GEMM<br>Grouped GEMM (聚合小 GEMM)</td><td>FlashInfer ROCm GEMM<br>hipBLASLt Grouped GEMM</td><td>平台 GEMM</td></tr>
+<tr><td class="cl"><strong>NCCL/RCCL 通信</strong></td><td>多卡推理</td><td>AllReduce/AllGather<br>带宽/延迟敏感</td><td>NCCL 2.21 + NVLink 5.0<br>Rail-Local Topology</td><td>RCCL + XGMI · ROCm 7.2 拓扑感知</td><td>平台 MPI/RDMA</td></tr>
+<tr><td class="cl"><strong>Sampling</strong></td><td>Decode 尾端</td><td>Top-K/Top-P/Min-P · 大词表</td><td>FlashInfer rejection-based sampler<br>无需排序的 GPU 端采样</td><td>同 (ROCm port)</td><td>基础采样实现</td></tr>
+<tr><td class="cl"><strong>量化/反量化</strong></td><td>全程</td><td>权重压缩 · KV Cache 压缩<br>Per-tensor/channel scale</td><td>AWQ-Marlin · GPTQ · FP8 e4m3</td><td>AWQ 基础 · GGUF · FP8 (RDNA4 原生)</td><td>平台量化方案</td></tr>
+</table>
+</div>
+
+<div class="card bl">
+<h3>2.3 L5 推理引擎层 — vLLM / SGLang / TensorRT-LLM 深度对比</h3>
+<table>
+<thead><tr><th>维度</th><th>vLLM</th><th>SGLang</th><th>TensorRT-LLM</th></tr></thead>
+<tr><td class="cl">核心创新</td><td><strong>PagedAttention</strong> — 借鉴 OS 虚拟内存分页思想<br>v0.7.3: 多尺寸分页 (4/8/16 token page)<br>内存利用率: 65%→92%, 碎片率&lt;4%<br>跨卡同步开销: −60%</td><td><strong>RadixAttention</strong> — KV Cache 按 Radix Tree 组织<br>LRU + 引用计数管理缓存复用<br>前缀命中率: 50%–99%<br>多轮对话吞吐达 vLLM 的 5×</td><td><strong>编译式 Kernel 融合</strong> — 模型预编译为 TRT Engine<br>最大化 kernel 融合 + 量化全覆盖<br>CPU KV 卸载 (TTFT 降低最高 14×)<br>唯一支持 FP8 的生产级引擎 (2025)</td></tr>
+<tr><td class="cl">批处理</td><td>Continuous Batching (迭代级调度器, 每步动态重建批次)</td><td>CB + 前缀缓存感知调度 (优先调度可复用前缀的请求)</td><td>In-flight Batching (NVIDIA 对 CB 的命名, 配合最大化融合)</td></tr>
+<tr><td class="cl">并行策略</td><td>TP + PP + DP + EP (实验)</td><td>TP + PP (有限) + DP</td><td>TP + PP + EP + DP (最全面)</td></tr>
+<tr><td class="cl">量化支持</td><td>AWQ · GPTQ · FP8 (实验)</td><td>AWQ · GPTQ</td><td><strong>FP8 · INT4 · FP4 + AWQ · GPTQ (最全面)</strong></td></tr>
+<tr><td class="cl">硬件覆盖</td><td>NVIDIA + <strong>AMD ROCm (First-Class, CI 93%+)</strong> + Google TPU</td><td>NVIDIA + <strong>AMD ROCm (Official)</strong></td><td>仅 NVIDIA (极致但锁定)</td></tr>
+<tr><td class="cl">易用性</td><td>极高 — pip install 即用<br>OpenAI-compatible API</td><td>高 — Docker 一键部署<br>内置结构化输出 (正则约束解码)</td><td>中等 — 需模型转换 · Engine 构建<br>v1.0 大幅改善易用性</td></tr>
+<tr><td class="cl">GitHub Stars</td><td>50k+ (PyTorch 基金会托管项目)</td><td>10k+ (PyTorch 生态)</td><td>NVIDIA 官方 (v1.0 已发布)</td></tr>
+<tr><td class="cl">最优场景</td><td>通用高并发 API 服务 · 极端并发扩展性最优 · 三平台覆盖</td><td>Agent / RAG / 多轮对话 · 结构化输出 (JSON/XML) · 前缀复用场景</td><td>极致低延迟 · NVIDIA 专有硬件 · FP8/FP4 前沿量化</td></tr>
+</table>
+</div>
+</section>
+
+<!-- ====== CH3: PERFORMANCE ENGINEERING ====== -->
+<section>
+<h2>第3章 推理性能工程体系</h2>
+
+<div class="card bl">
+<h3>3.1 标准化四阶段方法论</h3>
+
+<h4>阶段一：基准建立 (Baseline Establishment)</h4>
+<table>
+<thead><tr><th>步骤</th><th>NVIDIA 工具</th><th>AMD ROCm 工具</th><th>产出</th></tr></thead>
+<tr><td>1. 硬件能力摸底</td><td>Spec Sheet + 理论峰值计算 (FP16/BF16/FP8 TFLOPS, HBM BW)</td><td>同左 (W7900: 61.4 TFLOPS · 864 GB/s · R9700: 47.8 TF · 191 TF FP16矩阵 · 640 GB/s)</td><td>Roofline Model 上限</td></tr>
+<tr><td>2. 单算子基准测试</td><td>CUTLASS Profiler / cuBLASLt Benchmark / NCCL Tests</td><td>hipBLASLt Benchmark / CK Profiler / RCCL Tests</td><td>各精度各 shape 的 GEMM/Attention/通信峰值</td></tr>
+<tr><td>3. 端到端基线跑测</td><td>统一模型配置 (同一 checkpoint) + 统一数据集 + 统一指标 (TTFT/TPOT/ITL/Throughput)</td><td>同左 (ROCm wheel)</td><td>基准性能数据</td></tr>
+<tr><td>4. 对标数据收集</td><td>跨平台 (NVIDIA GPU vs AMD GPU vs 国产加速卡) 相同条件测试</td><td>同左</td><td>性能 Gap 量化数据 · 多维差异分析</td></tr>
+</table>
+
+<h4 style="margin-top:18px;">阶段二：瓶颈定位 (Bottleneck Identification)</h4>
+<table>
+<thead><tr><th>分析层级</th><th>NVIDIA</th><th>AMD ROCm</th><th>国产平台</th><th>诊断目标</th></tr></thead>
+<tr><td><strong>系统级</strong></td><td>Nsight Systems (nsys) — 全时间线分析</td><td>ROCm Systems Profiler (rocprof-systems)</td><td>perf + 火焰图 + OProfile (申威移植)</td><td>Top-3 最耗时 kernel · GPU 空闲期 · 数据传输阻塞</td></tr>
+<tr><td><strong>Kernel 级</strong></td><td>Nsight Compute (ncu) — 单 kernel 硬件计数器</td><td>ROCm Compute Profiler (rocprof-compute)</td><td>PMU/PMC 硬件计数器 + 自研全景工具 (198项指标)</td><td>SM/Wavefront 利用率 · 显存访问效率 · Roofline 定位 · Warp stall 原因</td></tr>
+<tr><td><strong>框架级</strong></td><td>vLLM 内建 metrics · PyTorch Profiler</td><td>同 (ROCm port)</td><td>自研埋点 + 厂商 Profiler</td><td>调度延迟 · KV Cache 碎片率 · Batch 效率 · 请求排队深度</td></tr>
+<tr><td><strong>应用级</strong></td><td colspan="2">自定义性能跟踪代码 (细粒度阶段计时 · NVTX/ROCTx 标注)</td><td>自研埋点代码</td><td>端到端各阶段耗时分布: 数据读取→预处理→推理→后处理</td></tr>
+</table>
+
+<h4 style="margin-top:18px;">阶段三：分层优化 (Hierarchical Optimization — 按 ROI 排序)</h4>
+<table>
+<thead><tr><th>优先级</th><th>优化类别</th><th>具体操作</th><th>预期收益</th><th>适用平台</th></tr></thead>
+<tr><td class="cl"><strong>P0</strong></td><td>推理引擎参数调优</td><td>gpu-memory-utilization (NVIDIA 0.95 / AMD 0.88) · max-num-seqs (256-512) · block-size (16/8/4) · max-model-len</td><td>20–50% 吞吐提升</td><td>NVIDIA ✅ · AMD ✅</td></tr>
+<tr><td class="cl"><strong>P0</strong></td><td>量化部署</td><td>FP8 KV Cache (H100+/MI300X+/RDNA4) + AWQ INT4 权重量化: 显存节省 50%, 吞吐提升 30–50%<br>RDNA3 (W7900): 仅 GGUF Q4/Q5 → 70B 模型单卡可用</td><td>50% 显存节省 + 30–80% 吞吐</td><td>NVIDIA ✅ · AMD ⚠️ (RDNA3 限于 GGUF, RDNA4 支持 FP8)</td></tr>
+<tr><td class="cl"><strong>P1</strong></td><td>并行策略编排</td><td>TP/PP/DP/EP 合理组合: MLA 模型 (DeepSeek) 优先 DP+EP (非 TP) — KV Cache 避免沿 head 维度复制的浪费</td><td>30–200% 吞吐</td><td>NVIDIA ✅ · AMD ⚠️ (EP 支持演进中)</td></tr>
+<tr><td class="cl"><strong>P1</strong></td><td>批处理 + Prefix Caching</td><td>Continuous Batching + Chunked Prefill + Prefix Caching (共享系统提示/模板的 KV 复用)</td><td>20–80% 吞吐 · TTFT 大幅降低</td><td>NVIDIA ✅ · AMD ✅ (vLLM ROCm)</td></tr>
+<tr><td class="cl"><strong>P2</strong></td><td>算子替换</td><td>FlashInfer / FlashAttention 替代默认 Attention · CUTLASS GEMM 替代 cuBLAS 默认路径</td><td>10–40% 单算子加速</td><td>NVIDIA ✅ · AMD ⚠️ (FA2/3 可用, FA4 不支持)</td></tr>
+<tr><td class="cl"><strong>P2</strong></td><td>Disaggregation (P/D 分离)</td><td>Prefill/Decode 物理分离部署 → 独立 GPU 池扩展 → KV-Aware 路由 → SLA 驱动弹性调度</td><td>15–40% 成本降低 · 大幅延迟稳定性提升</td><td>NVIDIA ✅ (Dynamo) · AMD 社区方案</td></tr>
+<tr><td class="cl"><strong>P3</strong></td><td>Kernel 定制开发</td><td>手写 CUDA CUTLASS CuTe kernel / HIP Composable Kernel / 国产加速卡 SDK kernel</td><td>5–20% 针对特定模型 shape</td><td>依平台而异 · 专家级能力要求</td></tr>
+<tr><td class="cl"><strong>P3</strong></td><td>编译器优化</td><td>torch.compile (Inductor) · CUDA Graphs · HIP Graphs (实验) · 自定义融合 pattern</td><td>5–15% 系统级提升</td><td>NVIDIA ✅ · AMD ⚠️ (HIP Graphs flaky)</td></tr>
+</table>
+
+<h4 style="margin-top:18px;">阶段四：验证闭环 (Validation Closure)</h4>
+<p>回归基线测试 · 精度损失 &lt;1% 验证 (对比 FP16 参考输出) · P50/P95/P99 延迟分布 · 吞吐量-延迟权衡曲线 · 24h+ 长时间稳定性测试 (无 OOM/精度漂移/延迟爬升) · 跨平台一致性验证</p>
+</div>
+
+<div class="card bl">
+<h3>3.2 量化策略全景矩阵</h3>
+<table>
+<thead><tr><th>方案</th><th>精度</th><th>压缩比</th><th>NVIDIA 支持</th><th>AMD ROCm 支持</th><th>精度损失</th><th>推荐场景</th></tr></thead>
+<tr><td class="cl">FP16/BF16</td><td>16-bit</td><td>1× (基线)</td><td>✅ 全平台</td><td>✅ 全平台 (BF16: RDNA3+)</td><td>无</td><td>高精度要求 · A100/W7900 存量</td></tr>
+<tr><td class="cl">FP8 E4M3</td><td>8-bit 浮点</td><td>2×</td><td>✅ H100+ (Hopper 原生)</td><td>✅ MI300X+ (CDNA3) · <strong>R9700+ (RDNA4 原生)</strong> · ❌ W7900 (RDNA3)</td><td>&lt;0.5%</td><td><strong>2025年生产推理首选</strong> · KV Cache 量化</td></tr>
+<tr><td class="cl">AWQ INT4</td><td>4-bit 整数</td><td>4× (75% 节省)</td><td>✅ AWQ-Marlin (最优 kernel)</td><td>⚠️ AWQ 基础可用 · GGUF 替代 · 额外损失 20-30%</td><td>&lt;2%</td><td>显存受限场景 (A10G/W7900) · 70B 单卡部署</td></tr>
+<tr><td class="cl">GPTQ INT4</td><td>4-bit 整数</td><td>4×</td><td>✅ 成熟</td><td>⚠️ GPTQ 不稳定 · GGUF 仍是 AMD 首选</td><td>&lt;2%</td><td>类似 AWQ · 校准方式不同</td></tr>
+<tr><td class="cl">GGUF Q4/Q5</td><td>4/5-bit</td><td>3-4×</td><td>✅ llama.cpp 原生</td><td><strong>✅ AMD 最佳量化选择</strong> · llama.cpp ROCm 原生</td><td>&lt;3%</td><td><strong>AMD RDNA3 平台首选</strong> · 本地推理</td></tr>
+<tr><td class="cl">FP4 / MXFP4</td><td>4-bit 浮点</td><td>4×</td><td>✅ B200+ (Blackwell)</td><td>✅ MI355X+ (CDNA4) · ROCm 7.0+</td><td>&lt;3%</td><td>2026年下一代推理 · 前沿探索</td></tr>
+</table>
+
+<div class="hb a">
+<strong>AMD 量化推理关键建议：</strong> 对于 RDNA3 (W7900/W7800)，<strong>GGUF Q4_K_M 是唯一成熟且可靠的 INT4 推理路径</strong>——AWQ 在 ROCm 上的 kernel (AWQ-Marlin) 尚未移植，性能额外损失 20-30%。对于 RDNA4 (R9700/R9600D)，<strong>FP8 原生推理是第一优先级</strong>——同等显存下吞吐是 FP16 的 2 倍，无需量化带来的精度损失。
+</div>
+</div>
+</section>
+
+<!-- ====== CH4: TOOLCHAIN ====== -->
+<section>
+<h2>第4章 三平台推理工具链全景</h2>
+
+<div class="card bl">
+<h3>4.1 按功能类别完整工具矩阵</h3>
+<table>
+<thead><tr><th>功能类别</th><th>NVIDIA</th><th>AMD ROCm</th><th>国产平台</th></tr></thead>
+<tr><td class="cl"><strong>Kernel Profiler</strong></td><td>Nsight Compute (ncu) — SM 利用率 · 显存效率 · Roofline · Warp stall · Speed of Light 报告</td><td>ROCm Compute Profiler (rocprof-compute) — 基础功能可用 · PMU 暴露不如 Nsight 详细</td><td><strong>PMU/PMC + 自研全景工具 (198项性能指标)</strong></td></tr>
+<tr><td class="cl"><strong>System Profiler</strong></td><td>Nsight Systems (nsys) — CPU/GPU 全时间线 · CUDA API trace · NVTX 标注 · MPI overlay</td><td>ROCm Systems Profiler (rocprof-systems) — 基础时间线 · ROCTx 标注</td><td>perf + OProfile (申威移植) + 火焰图 · Sysstat</td></tr>
+<tr><td class="cl"><strong>Debugger</strong></td><td>cuda-gdb — CUDA kernel 源码级调试</td><td>ROCgdb (AMD GPU 源码级调试) + ROCdbgapi (调试 API)</td><td>平台 GDB + 交叉调试工具链</td></tr>
+<tr><td class="cl"><strong>GPU 设备管理</strong></td><td>nvidia-smi + DCGM (Data Center GPU Manager) — 集群级 GPU 健康监控</td><td>AMD SMI + RDC (ROCm Data Center Tool) — 设备管理与集群监控</td><td>平台特定管理工具 (申威/天数/昇腾各自方案)</td></tr>
+<tr><td class="cl"><strong>GEMM 基准测试</strong></td><td>CUTLASS Profiler + cuBLASLt Benchmark · nvMatmulHeuristics 自动调优</td><td>hipBLASLt Benchmark + Composable Kernel Profiler · MIOPEN_FIND_ENFORCE=3 自动调优</td><td>CPU: PMU 事件建模 · 加速卡: 厂商 BLAS 基准</td></tr>
+<tr><td class="cl"><strong>通信基准</strong></td><td>NCCL Tests (nccl-tests) — all_reduce/all_gather/reduce_scatter 带宽/延迟</td><td>RCCL Tests — ROCm 7.2 拓扑感知通信评估</td><td>平台 MPI/RDMA 基准测试 (跨节点/跨卡通信)</td></tr>
+<tr><td class="cl"><strong>图编译器</strong></td><td>TensorRT — 图融合 + Kernel 自动选择 · FP8/FP4 量化</td><td>MIGraphX — ONNX→优化图→MIOpen/rocBLAS · ROCm 7.2 新增 FP8/FP4 编译支持</td><td>ONNX Runtime 适配 (跨架构)</td></tr>
+<tr><td class="cl"><strong>PTX/SASS/ISA 分析</strong></td><td>cuobjdump (-ptx / -sass) + nvdisasm — 指令级性能分析</td><td>AMD GPU ISA dump (hipcc -S / ROCm tools) — 指令级分析</td><td>objdump (交叉编译工具链) · 申威 SW64 ISA</td></tr>
+<tr><td class="cl"><strong>自动调优</strong></td><td>nvMatmulHeuristics — 16候选 → 96%峰值 · B200 上 5× 调优加速</td><td>CK AutoTuner + MIOPEN_FIND_ENFORCE=3 — 最高 3× MIOpen kernel 性能</td><td>手工调优 + 脚本化参数搜索 (工具链不成熟)</td></tr>
+<tr><td class="cl"><strong>容器化部署</strong></td><td>NVIDIA Container Toolkit (nvidia-docker) + GPU Operator for K8s</td><td>ROCm Container Toolkit + ROCm GPU Operator + Device Plugin for K8s</td><td>平台特定容器方案 (国产 Docker + K8s 适配)</td></tr>
+<tr><td class="cl"><strong>系统验证</strong></td><td>NVIDIA GPU Deployment Kit — 生产环境部署前全功能验证</td><td>ROCm Validation Suite — 驱动/运行时/HIP 功能诊断 · OCL conformance</td><td>手工验证脚本 · 跨平台兼容性测试</td></tr>
+</table>
+</div>
+</section>
+
+<!-- ====== CH5: CUDA vs ROCm ====== -->
+<section>
+<h2>第5章 CUDA 生态 vs ROCm 生态推理全栈对标</h2>
+
+<div class="card bl">
+<h3>5.1 推理十维度全栈对标 (2026年5月)</h3>
+<table>
+<thead><tr><th>层次</th><th>NVIDIA CUDA 生态</th><th>AMD ROCm 生态</th><th>差距评估</th><th>关键差异</th></tr></thead>
+<tr><td class="cl"><strong>GPU Kernel 模板库</strong></td><td>CUTLASS 4.3 (2025.11) + CuTe DSL<br>nvMatmulHeuristics 自动调优 · DeepGEMM 对齐 DeepSeek</td><td>Composable Kernel (CK) + rocWMMA<br>CK 支持 per-arch 编译 · 社区/文档规模远小于 CUTLASS</td><td><span style="color:var(--am);">中等</span></td><td>CK 成熟但"开箱即用"体验不如 CUTLASS · CuTe DSL 的 Python-native 优势</td></tr>
+<tr><td class="cl"><strong>DL 算子库</strong></td><td>cuDNN — 卷积/池化/归一化/RNN 等全面覆盖 · 极致优化</td><td>MIOpen + CK 后端 — 主流算子全覆盖 · <code>MIOPEN_FIND_ENFORCE=3</code> 性能调优</td><td><span style="color:var(--gn);">缩小中</span></td><td>MIOpen 覆盖度足够推理场景 · 极限性能仍逊于 cuDNN</td></tr>
+<tr><td class="cl"><strong>BLAS 线性代数</strong></td><td>cuBLAS · cuBLASLt — Hopper FP8 · Blackwell FP4 全覆盖</td><td>rocBLAS · hipBLAS · <strong>hipBLASLt (ROCm 7.2 大规模增强)</strong> — swizzle/restore-from-log · MI300X/350 GEMM 调优</td><td><span style="color:var(--gn);">接近</span></td><td>ROCm 7.2 hipBLASLt 补齐核心 GEMM 能力 · FP8/BF16/FP16 三精度覆盖</td></tr>
+<tr><td class="cl"><strong>Attention Kernel</strong></td><td><strong>FlashAttention 4</strong> (SM100 Blackwell) — 5路 Warp Specialization<br><strong>FA3</strong> (SM90 Hopper) — TMA + async pipeline · 接近 cuDNN 性能</td><td>FA2/FA3 (Triton-based, 非 CK 优化) — RDNA 上性能落后 · <strong>FA4 不支持 ROCm</strong></td><td><span style="color:var(--am);">中等</span></td><td><strong>FA3/FA4 不支持 ROCm 是其最大单点技术差距</strong> · 根因在 TMA 硬件缺失</td></tr>
+<tr><td class="cl"><strong>推理 Kernel 集成库</strong></td><td><strong>FlashInfer</strong> (MLSys 2025 最佳论文) — CUDA 原生全后端<br>Attention · GEMM · Sampling · Communication 四大算子族</td><td>FlashInfer ROCm port — fa2/ck 后端 · 核心 Attention/GEMM 已对齐<br>NVIDIA 通过 FlashInfer 发布 TensorRT-LLM kernel</td><td><span style="color:var(--gn);">缩小中</span></td><td>核心算子已对齐 · 高级特性 (FP4 MoE, Fused MLA) 仍在追赶</td></tr>
+<tr><td class="cl"><strong>通信库</strong></td><td>NCCL 2.21 + <strong>NVLink 5.0 (1.8 TB/s)</strong> + NVSwitch + Rail-Local Topology</td><td>RCCL + XGMI · ROCm 7.2 拓扑感知 (多 rail GDA/RCCL) · 带宽仍逊于 NVLink</td><td><span style="color:var(--rd);">较大</span></td><td>NVLink 带宽和拓扑灵活性对大规模分布式推理/训练至关重要</td></tr>
+<tr><td class="cl"><strong>图编译器</strong></td><td><strong>TensorRT</strong> — 图融合 + Kernel 选择 · FP8/FP4 全面 · NVIDIA 专有</td><td><strong>MIGraphX</strong> — ONNX→优化图→MIOpen/rocBLAS · ROCm 7.2 新增 FP8/FP4 编译器支持</td><td><span style="color:var(--am);">中等</span></td><td>MIGraphX 功能在追赶 · TensorRT 的 Kernel 自动选择 (tactic) 机制更加成熟</td></tr>
+<tr><td class="cl"><strong>Profiler 工具链</strong></td><td><strong>Nsight Compute (ncu) + Nsight Systems (nsys)</strong> — 功能最全面 · PMU 暴露最详细 · Roofline 自动化 · GUI 成熟</td><td>ROCm Compute Profiler + ROCm Systems Profiler — 基础功能可用 · CLI 为主 · PMU 暴露不如 Nsight</td><td><span style="color:var(--rd);">较大</span></td><td>Nsight 是 NVIDIA 生态最深的护城河之一 · ROCm Profiler 无法提供同级别的 PMU 粒度和易用性</td></tr>
+<tr><td class="cl"><strong>推理引擎</strong></td><td>vLLM · SGLang · TRT-LLM — <strong>全引擎完美支持</strong></td><td><strong>vLLM First-Class (v0.14 · CI 93%+)</strong> · SGLang Official<br>TRT-LLM 无 AMD 版本</td><td><span style="color:var(--gn);">接近</span></td><td>核心推理引擎已在 ROCm 上对齐 · TRT-LLM 的缺失是最佳 kernel 的缺失</td></tr>
+<tr><td class="cl"><strong>量化支持</strong></td><td>FP8/INT8/FP4 + AWQ-Marlin + GPTQ — 全精度 · 最优 kernel</td><td>FP8 (CDNA3+ · RDNA4) · <strong>GGUF (AMD 首选 INT4)</strong> · AWQ 基础 · FP4 (ROCm 7.0+)</td><td><span style="color:var(--gn);">接近</span></td><td><strong>AMD 的 INT4 生态以 GGUF 为主而非 AWQ/GPTQ</strong> · FP8 在 RDNA4 上首次对齐</td></tr>
+</table>
+
+<div class="hb r">
+<strong>总结：</strong> 2026 年 AMD ROCm 在推理引擎层 (vLLM/SGLang) 和 BLAS 算子层 (hipBLASLt) 已接近 NVIDIA CUDA。最大的三个差距点在于：① <strong>FlashAttention 3/4 不支持 ROCm</strong> (Attention kernel 性能上限)；② <strong>Nsight Profiler 的不可替代性</strong> (调试和性能分析效率)；③ <strong>TensorRT-LLM/FA4 等闭源 NVIDIA 专有 kernel 的缺失</strong>。对于 PyTorch + vLLM 推理的主流场景，AMD ROCm 在 2026 年已是生产可用的替代方案，性能差距在大 batch 场景下缩至 5-15%。
+</div>
+</div>
+
+<div class="card bl">
+<h3>5.2 CUDA→HIP 跨平台移植方法论</h3>
+<table>
+<thead><tr><th>步骤</th><th>操作</th><th>工具</th><th>注意事项</th></tr></thead>
+<tr><td class="cl">1. 自动转换</td><td>将 CUDA 源码 (.cu) 自动转换为 HIP 语法</td><td><code>hipify-perl</code> (文本替换) 或 <code>hipify-clang</code> (AST 级)</td><td>大部分 CUDA API (cudaMalloc → hipMalloc, cudaMemcpy → hipMemcpy) 为 1:1 映射</td></tr>
+<tr><td class="cl">2. 手动修正</td><td>检查并修正 Warp/Wavefront 敏感的代码</td><td>代码审查 · 静态分析</td><td><strong>Warp Size = 32 (NVIDIA) vs Wavefront Size = 64 (AMD)</strong> — 使用 warp shuffle/sync 原语的代码需要调整</td></tr>
+<tr><td class="cl">3. 重构调优</td><td>基于 ROCm Profiler 重新分析 kernel 瓶颈</td><td>ROCm Compute Profiler</td><td>Launch config (block size) · Shared Memory / LDS 使用 · 内存访问模式 · 针对 AMD GPU 微架构的重新调优</td></tr>
+<tr><td class="cl">4. 双平台维护</td><td>确保代码在 NVIDIA + AMD 上均可编译</td><td>HIP (双平台兼容) · CMake</td><td>HIP 代码可通过 hipcc + nvcc 后端编译为 NVIDIA GPU 目标 · 实现单代码库双平台部署</td></tr>
+</table>
+</div>
+</section>
+
+<!-- ====== CH6: RADEON PRO WORKSTATION GPUS ====== -->
+<section>
+<h2>第6章 AMD Radeon PRO 工作站 PCIe GPU 推理能力全景</h2>
+
+<div class="card al">
+<h3>6.1 七款产品 · 三代架构 · 完整规格矩阵</h3>
+<table>
+<thead><tr><th>参数</th><th>W6800</th><th>W7800</th><th>W7900</th><th>W7900D</th><th>R9700</th><th>R9700S</th><th>R9600D</th></tr></thead>
+<tr><td class="cl">架构</td><td>RDNA2</td><td>RDNA3</td><td>RDNA3</td><td>RDNA3 (降频)</td><td><strong>RDNA4</strong></td><td><strong>RDNA4</strong></td><td><strong>RDNA4</strong></td></tr>
+<tr><td class="cl">制程</td><td>7nm</td><td>5+6nm Chiplet</td><td>5+6nm Chiplet</td><td>5+6nm Chiplet</td><td><strong>4nm (N4P)</strong></td><td><strong>4nm</strong></td><td><strong>4nm</strong></td></tr>
+<tr><td class="cl">CU 数量</td><td>60</td><td>70</td><td><strong>96</strong></td><td>96</td><td>64</td><td>64</td><td>48</td></tr>
+<tr><td class="cl">流处理器</td><td>3,840</td><td>~4,480</td><td><strong>6,144</strong></td><td>6,144</td><td>4,096</td><td>4,096</td><td>3,072</td></tr>
+<tr><td class="cl">AI 加速器</td><td>第1代 (基础矩阵)</td><td>第2代 · 140个</td><td>第2代 · <strong>192个</strong></td><td>192个</td><td><strong>第3代 (WMMA v2) · 128个</strong></td><td><strong>128个</strong></td><td>96个</td></tr>
+<tr><td class="cl">显存</td><td>32 GB ECC</td><td>32/48 GB ECC</td><td><strong>48 GB ECC</strong></td><td><strong>48 GB ECC</strong></td><td>32 GB ECC</td><td>32 GB ECC</td><td>32 GB ECC</td></tr>
+<tr><td class="cl">显存位宽</td><td>256-bit</td><td>256-bit</td><td><strong>384-bit</strong></td><td><strong>384-bit</strong></td><td>256-bit</td><td>256-bit</td><td>256-bit</td></tr>
+<tr><td class="cl">显存带宽</td><td>512 GB/s</td><td>576 GB/s</td><td><strong>864 GB/s</strong></td><td><strong>864 GB/s</strong></td><td>640 GB/s</td><td>640 GB/s</td><td>640 GB/s</td></tr>
+<tr><td class="cl">Infinity Cache</td><td>128 MB</td><td>64 MB</td><td>96 MB</td><td>96 MB</td><td>64 MB</td><td>64 MB</td><td>64 MB</td></tr>
+<tr><td class="cl">FP32 峰值</td><td>~17.8 TF</td><td>~35 TF</td><td><strong>~61.4 TF</strong></td><td>~54 TF*</td><td>47.8 TF</td><td>47.8 TF</td><td>24.8 TF</td></tr>
+<tr><td class="cl">FP16 矩阵</td><td>~35.7 TF</td><td>~70 TF</td><td>~122.6 TF</td><td>~106 TF</td><td><strong>~191 TF</strong></td><td><strong>~191 TF</strong></td><td>~96 TF</td></tr>
+<tr><td class="cl">INT8/FP8 矩阵</td><td>❌ 无FP8</td><td>❌ 无FP8</td><td>~245 TOPS (INT8)</td><td>~212 TOPS</td><td><strong>383 TOPS (FP8 原生)</strong></td><td><strong>383 TOPS</strong></td><td>~192 TOPS</td></tr>
+<tr><td class="cl">INT4+稀疏</td><td>❌</td><td>❌</td><td>❌</td><td>❌</td><td><strong>1,531 TOPS</strong></td><td><strong>1,531 TOPS</strong></td><td>~768 TOPS</td></tr>
+<tr><td class="cl">TBP/TDP</td><td>250W</td><td>260W</td><td>295W</td><td>295W</td><td>300W</td><td>300W</td><td><strong>150W</strong></td></tr>
+<tr><td class="cl">散热方式</td><td>主动 (风扇)</td><td>主动</td><td>主动 (涡轮/DS)</td><td>主动</td><td>主动 (blower)</td><td><strong>被动 (机房风道)</strong></td><td><strong>被动 (机房风道)</strong></td></tr>
+<tr><td class="cl">PCIe 接口</td><td>4.0 x16</td><td>4.0 x16</td><td>4.0 x16</td><td>4.0 x16</td><td><strong>5.0 x16</strong></td><td><strong>5.0 x16</strong></td><td><strong>5.0 x16</strong></td></tr>
+<tr><td class="cl">ROCm LLVM 目标</td><td>gfx1030</td><td>gfx1100</td><td>gfx1100</td><td>gfx1100</td><td><strong>gfx1201</strong></td><td><strong>gfx1201</strong></td><td><strong>gfx1201</strong></td></tr>
+<tr><td class="cl">推出时间</td><td>2021.6</td><td>2023</td><td>2023</td><td>2025.10</td><td>2025.10</td><td>2025.12</td><td>2025.12</td></tr>
+<tr><td class="cl">参考价</td><td>$2,249</td><td>~$2,499</td><td>$3,999</td><td>中国特供</td><td>~$1,299</td><td>TBD</td><td>TBD</td></tr>
+</table>
+<p style="font-size:12px;color:var(--mu);">* W7900D: 为满足美国对华 AI 出口管制，Boost 频率从 W7900 的 ~2,500 MHz 降至 ~2,156 MHz，FP32 从 61.4 TF 降至 ~54 TF。48GB ECC 显存、384-bit 位宽、864 GB/s 带宽<strong>完全保留</strong>。</p>
+</div>
+
+<div class="card al">
+<h3>6.2 模型兼容性与选型建议</h3>
+<table>
+<thead><tr><th>模型 (显存需求)</th><th>W6800 (32GB)</th><th>W7900 (48GB)</th><th>R9700 (32GB)</th><th>R9600D (32GB)</th><th>推荐 GPU</th></tr></thead>
+<tr><td>Llama 3.1 8B FP16 (~16GB)</td><td>✅ FP16 流畅</td><td>✅ 大余量</td><td>✅ FP8 最优 (吞吐×2)</td><td>✅ FP8 可用</td><td>R9700 (FP8)</td></tr>
+<tr><td>Qwen2.5 14B (~28GB)</td><td>⚠️ INT4 紧凑</td><td>✅ FP16 可用</td><td>✅ FP8 可用</td><td>⚠️ INT4</td><td>W7900 或 R9700</td></tr>
+<tr><td><strong>Llama 3.1 70B INT4</strong> (~36-40GB)</td><td>❌ 显存不足</td><td><strong>✅ 单卡 · 8-12GB KV余量</strong></td><td>⚠️ 紧凑 (≈36GB+KV)</td><td>❌ 显存不足</td><td><strong>W7900 (唯一)</strong></td></tr>
+<tr><td>Qwen2.5 32B (~64/20GB)</td><td>✅ INT4</td><td>✅ FP16 宽裕</td><td>✅ FP8/INT4</td><td>✅ INT4</td><td>W7900 (FP16) 或 R9700 (FP8)</td></tr>
+<tr><td>Mixtral 8×7B (~50/26GB)</td><td>⚠️ INT4 紧凑</td><td>✅ FP16 可用</td><td>⚠️ INT4 紧凑</td><td>❌ 显存不足</td><td>W7900</td></tr>
+<tr><td>Gemma-3 27B FP8 (~14GB)</td><td>❌ 无 FP8</td><td>❌ 无 FP8</td><td><strong>✅ FP8 原生</strong></td><td><strong>✅ FP8 原生</strong></td><td>R9700 / R9600D</td></tr>
+<tr><td>DeepSeek-R1 671B</td><td>❌</td><td>❌ 需 8× 集群</td><td>❌ 需 8× 集群</td><td>❌</td><td>需多卡集群</td></tr>
+</table>
+
+<div class="hb r">
+<strong>选型总结：</strong><br>
+<strong>W7900 (48GB)</strong> — 单卡部署 70B 量化模型的<strong>唯一选择</strong>。48GB ECC + 384-bit + 864 GB/s 的显存配置在所有 AMD 工作站产品中独一无二。适合大模型本地推理和需要充足 KV Cache 余量的场景。<br><br>
+<strong>R9700 ($1,299)</strong> — <strong>FP8 推理性价比标杆</strong>。WMMA v2 带来 383 TOPS FP8 原生算力 + 1,531 TOPS INT4+稀疏，价格仅为 RTX PRO 同级产品的 1/3。适合 34B 以下模型的 FP8 推理。<br><br>
+<strong>R9600D (150W 被动)</strong> — <strong>高密度边缘推理节点</strong>。150W 低功耗 + 被动散热 + 32GB ECC，在边缘部署场景中提供极佳的部署密度和运维可靠性。<br><br>
+<strong>W7900D</strong> — <strong>中国特供·大显存选项</strong>。在出口管制限制下保留了 48GB 全部显存和带宽能力，仅算力受限。
+</div>
+</div>
+
+<div class="card al">
+<h3>6.3 AMD Radeon PRO vs NVIDIA RTX PRO 工作站对标</h3>
+<table>
+<thead><tr><th>维度</th><th>W7900 (RDNA3)</th><th>NVIDIA RTX 6000 Ada</th><th>R9700 (RDNA4)</th><th>NVIDIA RTX PRO 5000 (Blackwell)</th></tr></thead>
+<tr><td class="cl">显存</td><td><strong>48 GB GDDR6 ECC</strong></td><td>48 GB GDDR6 ECC</td><td>32 GB GDDR6 ECC</td><td>32 GB GDDR7 ECC</td></tr>
+<tr><td class="cl">显存带宽</td><td>864 GB/s</td><td><strong>960 GB/s</strong></td><td>640 GB/s</td><td><strong>896 GB/s</strong></td></tr>
+<tr><td class="cl">FP32 峰值</td><td>61.4 TF</td><td><strong>91.1 TF</strong></td><td>47.8 TF</td><td><strong>~55 TF</strong></td></tr>
+<tr><td class="cl">AI 推理算力</td><td>~245 TOPS (INT8)</td><td><strong>~680 TOPS (FP8)</strong></td><td>383 TOPS (FP8) / 1,531 (INT4+稀疏)</td><td><strong>~1,000+ TOPS (FP8) / FP4 原生</strong></td></tr>
+<tr><td class="cl">TBP</td><td><strong>295W</strong></td><td>300W</td><td>300W</td><td><strong>~250W</strong></td></tr>
+<tr><td class="cl">参考价</td><td><strong>$3,999</strong></td><td>$6,800 (1.7×)</td><td><strong>~$1,299</strong></td><td>~$4,000 (3.1×)</td></tr>
+<tr><td class="cl">FP8 原生</td><td>❌ 不支持</td><td><strong>✅ Ada 原生</strong></td><td><strong>✅ RDNA4 原生</strong></td><td><strong>✅</strong></td></tr>
+<tr><td class="cl">CUDA/HIP 生态</td><td>ROCm (追赶中)</td><td><strong>CUDA 全覆盖</strong></td><td>ROCm (追赶中)</td><td><strong>CUDA 全覆盖</strong></td></tr>
+<tr><td class="cl">单卡 70B INT4</td><td><strong>✅ 充足余量</strong></td><td>✅ 充足</td><td>⚠️ 紧凑</td><td>⚠️ 紧凑</td></tr>
+<tr><td class="cl">推理 tok/$</td><td><strong>最优 (大显存)</strong></td><td>中等</td><td><strong>最优 (FP8)</strong></td><td>中等</td></tr>
+</table>
+</div>
+</section>
+
+<!-- ====== CH7: CAPABILITY ====== -->
+<section>
+<h2>第7章 推理工程师能力模型与发展路线</h2>
+
+<div class="card bl">
+<h3>7.1 五维能力模型与四级发展阶梯</h3>
+<table>
+<thead><tr><th>级别</th><th>框架工程 (L5)</th><th>算子计算 (L4)</th><th>性能分析 (L2-L3)</th><th>跨平台 (L1)</th><th>工程交付 (L6)</th></tr></thead>
+<tr><td class="cl">初级 (0-2年)</td><td>vLLM/llama.cpp 部署 · ROCm 环境搭建</td><td>PyTorch 推理脚本 · GGUF 量化使用</td><td>nvidia-smi · rocm-smi · 基础日志分析</td><td>单一平台部署</td><td>Docker 基础 · 单机服务</td></tr>
+<tr><td class="cl">中级 (2-5年)</td><td>Nsight Systems · ROCm Sys Profiler · 引擎参数调优</td><td>CUTLASS Profiler · CK 基础 · NCCL Tests</td><td>Roofline 建模 · 瓶颈定位 · ISA 阅读</td><td>CUDA + HIP 双平台</td><td>CI/CD · K8s 部署 · 监控告警</td></tr>
+<tr><td class="cl">高级 (5-8年)</td><td>框架级移植适配 · vLLM 深度调优 · 跨平台评估</td><td>CUTLASS CuTe · hipBLASLt GEMM · CUDA→HIP 移植</td><td>Nsight Compute 深度 · ROCm Compute Profiler · SASS/ISA 分析</td><td>NVIDIA+AMD+国产 · 统一基准</td><td>集群级运维 · 生产故障排查</td></tr>
+<tr><td class="cl">专家 (8年+)</td><td>推理引擎核心架构 · Disaggregation 设计</td><td>CK kernel 开发 · 自定义 WMMA/CuTe kernel</td><td>PMU 事件建模 · 自研 Profiler · SASS 级调优</td><td>全平台覆盖 · 国产从零到一</td><td>生态建设 · 开源贡献</td></tr>
+</table>
+</div>
+
+<div class="card bl">
+<h3>7.2 候选人能力雷达与 Radeon PRO 发展建议</h3>
+<h4>NVIDIA 平台</h4>
+<div class="mr"><div class="domain">vLLM 部署优化 · Nsight Profiling</div><div class="bw"><div class="bar" style="width:92%;background:var(--nv);"></div></div><div class="level">9.2</div></div>
+<div class="mr"><div class="domain">CUTLASS/cuBLASLt GEMM 调优</div><div class="bw"><div class="bar" style="width:88%;background:var(--nv);"></div></div><div class="level">8.8</div></div>
+<div class="mr"><div class="domain">NCCL Tests · 多卡通信评估</div><div class="bw"><div class="bar" style="width:85%;background:var(--nv);"></div></div><div class="level">8.5</div></div>
+
+<h4 style="margin-top:16px;">AMD ROCm + Radeon PRO (核心成长空间)</h4>
+<div class="mr"><div class="domain">ROCm 环境搭建 · W7900/R9700 部署</div><div class="bw"><div class="bar" style="width:65%;background:var(--am);"></div></div><div class="level">6.5</div></div>
+<div class="mr"><div class="domain">vLLM ROCm · llama.cpp GGUF 推理</div><div class="bw"><div class="bar" style="width:60%;background:var(--am);"></div></div><div class="level">6.0</div></div>
+<div class="mr"><div class="domain">HIP 编程 · WMMA v1/v2 理解</div><div class="bw"><div class="bar" style="width:35%;background:var(--rd);"></div></div><div class="level">3.5</div></div>
+<div class="mr"><div class="domain">ROCm Profiler 使用</div><div class="bw"><div class="bar" style="width:40%;background:var(--rd);"></div></div><div class="level">4.0</div></div>
+<div class="mr"><div class="domain">RDNA3/4 架构知识 (CU vs AI 加速器)</div><div class="bw"><div class="bar" style="width:30%;background:var(--rd);"></div></div><div class="level">3.0</div></div>
+
+<h4 style="margin-top:16px;">国产平台</h4>
+<div class="mr"><div class="domain">框架级移植适配 · 跨平台评估</div><div class="bw"><div class="bar" style="width:95%;background:var(--pu);"></div></div><div class="level">9.5</div></div>
+<div class="mr"><div class="domain">PMU/PMC 性能分析 · 自研工具链</div><div class="bw"><div class="bar" style="width:92%;background:var(--pu);"></div></div><div class="level">9.2</div></div>
+
+<div class="hb b" style="margin-top:18px;">
+<strong>Radeon PRO 快速补齐路径 (1-3个月)：</strong><br>
+① <strong>第1周</strong>: W7900 (48GB) 完成 ROCm 7.2 环境 → vLLM ROCm wheel 部署 Llama 3.1 70B INT4 (GGUF) → 验证单卡 70B 推理可用性<br>
+② <strong>第2-3周</strong>: R9700 利用 FP8 原生支持部署 Gemma-3 27B / Llama 3.1 8B → 对比 FP8 vs FP16 vs GGUF 三种推理路径的吞吐差异<br>
+③ <strong>第4-6周</strong>: 将现有 CUDA kernel 通过 HIPIFY 移植到 ROCm → 深入理解 WMMA v1 (RDNA3) vs v2 (RDNA4) 差异 → 使用 ROCm Profiler 分析 kernel 瓶颈<br>
+④ <strong>第7-12周</strong>: 建立 W7900 (RDNA3 · 48GB) vs R9700 (RDNA4 · 32GB) vs NVIDIA A100/H100 的跨平台推理基准 → 产出完整对标报告
+</div>
+</div>
+</section>
+
+<!-- ====== CH8: TRENDS ====== -->
+<section>
+<h2>第8章 2025–2026 推理技术栈趋势与核心结论</h2>
+
+<div class="card bl">
+<h3>8.1 六大趋势</h3>
+<table>
+<thead><tr><th>#</th><th>趋势</th><th>驱动因素</th><th>人才能力影响</th></tr></thead>
+<tr><td class="cl">1</td><td><strong>KV Cache 成为第一性瓶颈</strong></td><td>128K–1M token 长上下文 · Agent 推理标准需求<br>内存带宽墙 + 容量墙双重制约</td><td>显存层次认知 · 分页管理 · 量化压缩 · 前缀复用 · 分层缓存 (GPU/CPU/SSD)</td></tr>
+<tr><td class="cl">2</td><td><strong>Disaggregation 成为标准架构</strong></td><td>P/D 物理分离 · KV-Aware 路由 · SLA 弹性<br>NVIDIA Dynamo · PPD 多轮优化</td><td>分布式系统设计 · 从单机优化到集群级优化</td></tr>
+<tr><td class="cl">3</td><td><strong>混合精度推理成为默认</strong></td><td>FP8 (Hopper/CDNA3/RDNA4) → NVFP4 (Blackwell) → MXFP4 (CDNA4)</td><td>量化原理 · 数值精度分析 · 不同精度格式的 trade-off</td></tr>
+<tr><td class="cl">4</td><td><strong>Kernel 复杂度持续攀升</strong></td><td>5路 Warp Specialization (FA4) → Nanoflow GEMM+Attention+Comm 水平融合</td><td>SASS/ISA 阅读 · Warp/Wavefront 调度 · 微架构级理解</td></tr>
+<tr><td class="cl">5</td><td><strong>硬件多元化与国产化并行</strong></td><td>NVIDIA · AMD ROCm · Intel · Google TPU · 华为昇腾 · 天数智芯<br>AI PRO 品牌重塑 · Radeon PRO → AI PRO 战略转型</td><td><strong>跨平台能力从加分项变为必选项</strong> · CUDA+HIP+国产 三技能组合</td></tr>
+<tr><td class="cl">6</td><td><strong>出口管制加速中国特供产品线</strong></td><td>W7900D (48GB 保留 · 算力降频合规)<br>R9700S/R9600D 被动散热 (数据中心/边缘)</td><td>理解合规限制下的硬件 trade-off · 国产替代方案评估能力</td></tr>
+</table>
+</div>
+
+<div class="card bl">
+<h3>8.2 核心结论</h3>
+<div class="hb b">
+<p><strong>推理技术栈 = 纵向贯通六层 × 横向覆盖三平台。</strong></p>
+<p style="margin-top:8px">纵向贯通（硬件→微架构→运行时→算子→引擎→服务）决定工程师能"挖多深"。横向覆盖（NVIDIA CUDA + AMD ROCm + 国产加速卡）决定工程师能"走多宽"。</p>
+<p style="margin-top:8px">2026 年 AI 芯片格局：NVIDIA 凭借 CUDA 生态的"最后 10%"优势（FA4、TensorRT-LLM、Nsight Profiler）保持高价值场景统治力；AMD ROCm 7.2 + Radeon PRO (特别是 W7900 48GB + R9700 FP8) 在 PyTorch + vLLM 推理的主流场景中已成为生产可用的替代方案；国产平台在国家战略驱动下，在框架移植适配和自主工具链建设方面持续突破。</p>
+<p style="margin-top:8px">AMD Radeon PRO 工作站 GPU 在 2026 年的<strong>核心价值主张</strong>：W7900 (48GB) 是单卡 70B 量化模型的最优 AMD 选择；R9700 ($1,299 · FP8 原生) 是 FP8 推理性价比标杆；R9700S/R9600D 的被动散热设计开启服务器化部署新范式。</p>
+<p style="margin-top:8px">最稀缺的人才画像：<strong>同时具备 NVIDIA CUDA 深度调优 + AMD ROCm/CUDA→HIP 迁移 + 国产平台从零到一工具链建设能力的工程师</strong>。</p>
+</div>
+</div>
+</section>
+
+<section><h2>附录：参考资源</h2><div class="card">
+<ul style="padding-left:20px;font-size:14px;">
+<li>AMD. <em>Radeon PRO W7900/W7800/W6800 Product Pages</em>. amd.com.</li>
+<li>AMD. <em>Radeon AI PRO R9700 Product Page</em>. amd.com, October 2025.</li>
+<li>VideoCardz. <em>AMD Radeon AI PRO R9700S and R9600D</em>. December 2025.</li>
+<li>AMD GPUOpen. <em>Using Matrix Cores on AMD RDNA 4 GPUs</em>. gpuopen.com, 2025.</li>
+<li>AMD ROCm Docs. <em>System Requirements (Linux & Windows) — ROCm 6.4.x/7.2</em>. rocm.docs.amd.com.</li>
+<li>NVIDIA. <em>CUTLASS 4.3 Changelog</em>. November 2025.</li>
+<li>FlashInfer. <em>Kernel Library for LLM Serving</em>. MLSys 2025 Best Paper.</li>
+<li>Modal. <em>Reverse-Engineering Flash Attention 4</em>. September 2025.</li>
+<li>Tom's Hardware. <em>ISSCC 2026: AMD Instinct MI355X</em>. February 2026.</li>
+<li>vLLM. <em>ROCm as First-Class Platform (v0.14.0)</em>. January 2026.</li>
+<li>TechSpot/Guru3D. <em>AMD Radeon PRO W7900D China-Specific GPU</em>. 2025.</li>
+<li>GigaGPU. <em>AMD GPU for AI in 2026: ROCm Status Update</em>. April 2026.</li>
+<li>Spheron. <em>ROCm vs CUDA for GPU Cloud 2026</em>. 2026.</li>
+<li>中国信通院. <em>AISHPerf 基准体系</em>. 2025.</li>
+</ul>
+</div></section>
+
+<div class="fn">
+<p>免责声明：本报告基于公开行业资料和研究论文编制。AMD、Radeon、Radeon PRO、ROCm、RDNA、CDNA 为 Advanced Micro Devices, Inc. 商标。NVIDIA、CUDA、Nsight、Hopper、Blackwell、RTX 为 NVIDIA Corporation 商标。所有评估仅供参考，不构成投资或采购建议。</p>
+<p>报告生成日期：2026年5月22日 | vFinal | 经过多轮交叉验证的技术参数审查</p>
+</div>
+
+</div>
+</body>
+</html>
