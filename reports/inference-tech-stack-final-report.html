@@ -30,6 +30,11 @@ section h4{font-size:14px;font-weight:600;color:var(--acc);margin:14px 0 6px}
 .card.bl{border-left:4px solid var(--acc)}
 .card.gl{border-left:4px solid var(--nv)}
 .card-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(340px,1fr));gap:18px}
+.table-wrap{width:100%;overflow-x:auto;-webkit-overflow-scrolling:touch;margin:12px 0 20px;border:1px solid var(--bdr);border-radius:var(--r)}
+.table-wrap table{margin:0;border:none;min-width:100%}
+.table-wrap table th,.table-wrap table td{white-space:nowrap}
+.table-wrap table th:first-child,.table-wrap table td:first-child{white-space:nowrap;position:sticky;left:0;background:#fafbfc;z-index:1}
+.table-wrap table th:first-child{background:#f8fafc;z-index:2}
 table{width:100%;border-collapse:collapse;margin:12px 0 20px;font-size:13px}
 th,td{border:1px solid var(--bdr);padding:8px 12px;text-align:left}
 th{background:#f8fafc;font-weight:600;font-size:12px;color:var(--mu);text-transform:uppercase}
@@ -57,7 +62,60 @@ tr:hover{background:#fafbfc}
 .tl-item .date{font-size:12px;color:var(--mu);font-weight:600}
 .tl-item .desc{font-size:14px;margin-top:2px}
 .fn{font-size:13px;color:var(--mu);border-top:1px solid var(--bdr);padding-top:16px;margin-top:40px}
-@media print{body{font-size:12px}.container{max-width:100%;padding:20px}}
+
+/* Tablet (768px-1024px) */
+@media screen and (max-width:1024px){
+  body{font-size:14px}
+  .container{padding:24px 20px}
+  .report-header h1{font-size:24px}
+  .report-header .subtitle{font-size:13px}
+  section h2{font-size:19px}
+  section h3{font-size:15px}
+  .card{padding:16px 18px}
+  .card-grid{grid-template-columns:1fr}
+  .mr{flex-wrap:wrap}
+  .mr .domain{min-width:140px;width:100%;margin-bottom:4px}
+  .mr .level{min-width:40px}
+  .exec-summary{padding:18px 20px}
+  table{font-size:12px}
+  th,td{padding:6px 8px}
+  .badge{font-size:11px;padding:3px 10px}
+}
+
+/* Phone (<768px) */
+@media screen and (max-width:768px){
+  body{font-size:13px;line-height:1.7}
+  .container{padding:16px 12px}
+  .report-header{padding-bottom:16px;margin-bottom:20px}
+  .report-header h1{font-size:20px}
+  .report-header .meta{font-size:11px}
+  .report-header .subtitle{font-size:12px}
+  .badge-row{gap:6px}
+  .badge{font-size:10px;padding:3px 8px}
+  section{margin-bottom:24px}
+  section h2{font-size:17px;margin-bottom:10px}
+  section h3{font-size:14px;margin:14px 0 8px}
+  section h4{font-size:12px}
+  .card{padding:14px 14px;margin-bottom:12px}
+  .card.al,.card.bl,.card.gl{border-left-width:3px}
+  .exec-summary{padding:14px 16px;margin-bottom:20px}
+  .exec-summary h2{font-size:15px}
+  .hb{padding:10px 14px;font-size:12px}
+  .mr{gap:8px}
+  .mr .domain{min-width:100px;font-size:12px}
+  .mr .bw{height:10px}
+  .mr .level{min-width:36px;font-size:11px}
+  table{font-size:11px}
+  th,td{padding:5px 6px}
+  th{font-size:10px}
+  .table-wrap{border-radius:calc(var(--r) - 2px)}
+  .fn{font-size:11px;margin-top:24px}
+  .tl{padding-left:16px}
+  .tl-item{padding:6px 0 6px 12px}
+  .tl-item .desc{font-size:12px}
+}
+
+@media print{body{font-size:12px}.container{max-width:100%;padding:20px}.table-wrap{overflow-x:visible}.table-wrap table th:first-child,.table-wrap table td:first-child{position:static}}
 </style>
 </head>
 <body>
@@ -78,62 +136,80 @@ tr:hover{background:#fafbfc}
 <div class="exec-summary">
 <h2>报告概述</h2>
 <p>本报告为<strong>大模型推理技术栈的统一整合最终版本</strong>，融合了此前全部研究工作的核心成果。报告系统性地从<strong>六个抽象层次</strong>（硬件层→微架构层→运行时层→算子层→推理引擎层→应用服务层）解析推理技术栈的完整图景，深度对比<strong>NVIDIA CUDA</strong>与<strong>AMD ROCm</strong>两大生态在推理领域的能力矩阵，并首次完整呈现<strong>AMD Radeon PRO 工作站 PCIe GPU 七款产品</strong>（W6800→W7800→W7900→W7900D→R9700→R9700S→R9600D）的推理能力全景分析。</p>
-<p style="margin-top:8px">报告覆盖：① 推理技术栈六层架构及每层技术组成 ② Tensor Core vs WMMA 微架构级对比 ③ 跨平台推理性能工程四阶段方法论 ④ vLLM/SGLang/TensorRT-LLM 引擎架构对比 ⑤ NVIDIA Nsight vs AMD ROCm Profiler vs 国产 PMU/PMC 三平台工具链 ⑥ PCIe 工作站 GPU 推理能力矩阵与选型指南 ⑦ 推理工程师五维能力模型与四级发展路线。</p>
+<p style="margin-top:8px">报告覆盖：① 推理技术栈七层架构及每层技术组成（含固件驱动层、编译工具链层的精化拆分）② Tensor Core vs WMMA 微架构级对比 ③ 跨平台推理性能工程四阶段方法论 ④ vLLM/SGLang/TensorRT-LLM 引擎架构对比 ⑤ NVIDIA Nsight vs AMD ROCm Profiler vs 国产 PMU/PMC 三平台工具链 ⑥ PCIe 工作站 GPU 推理能力矩阵与选型指南 ⑦ 推理工程师五维能力模型与四级发展路线。</p>
 <p style="font-size:13px;color:var(--mu);margin-top:8px">所有技术参数均基于 2025–2026 年公开资料（AMD 官方产品页、ROCm 文档、ISSCC 2026、MLSys 论文、vLLM/SGLang 社区数据）交叉验证。</p>
 </div>
 
 <!-- ====== CH1: SIX LAYERS ====== -->
 <section>
-<h2>第1章 推理技术栈六层分层架构</h2>
+<h2>第1章 推理技术栈分层架构</h2>
 
 <div class="card bl">
-<h3>1.1 从硬件到应用的全栈视图</h3>
-<p>大模型推理系统可以清晰地划分为六个抽象层次。理解这个分层架构是构建系统性推理优化能力的基石。每一层都有独立的技术栈、工具链和优化方法论，各层之间通过明确接口协作。一个推理工程师的"深度"取决于能贯通几层，"宽度"取决于能覆盖几个平台。</p>
+<h3>1.1 从硬件到应用的全栈视图 — 七层精化模型</h3>
+<p>大模型推理系统可以抽象为<strong>七个层次</strong>。相对于更粗粒度的六层模型，将<strong>"固件与驱动层"</strong>从微架构/硬件之间拆分出来，以及将<strong>"编译与工具链层"</strong>从运行时/微架构之间独立出来，可以更精确地反映 ROCm 软件栈的实际结构——特别是 <code>amdgpu</code> + <code>amdkfd</code> 双内核驱动架构、HSA Runtime、IOMMU/SR-IOV 等服务器部署关键组件在推理系统中扮演的独立角色。</p>
+<p style="font-size:13px;color:var(--mu);margin-top:4px">注：本七层模型以 AMD ROCm 为主视角展开，同步标注 NVIDIA CUDA 和国产平台对应组件。不同硬件栈（如 Intel Gaudi 走 SynapseAI、Apple Silicon 走 Metal/MPS）的软件层对应关系不同，不在本表覆盖范围内。</p>
 <table>
 <thead><tr><th>层次</th><th>名称</th><th>核心职责</th><th>NVIDIA 代表技术</th><th>AMD ROCm 代表技术</th><th>国产平台</th></tr></thead>
 <tr>
-<td class="cl">L6</td><td><strong>应用与服务层</strong></td>
-<td>API 网关 · 负载均衡 · KV-Aware 路由 · 弹性伸缩 · SLA 保障 · 多租户 · 监控告警</td>
-<td>NVIDIA Dynamo · KServe · Triton Inference Server</td>
-<td>AMD Inference Microservices (AIM) · Dynamo ROCm port</td>
-<td>国产编排平台 · 定制 API 网关</td>
+<td class="cl">L7</td><td><strong>应用与编排层</strong></td>
+<td>API 网关 · 负载均衡 · KV-Aware 路由 · 弹性伸缩 · SLA 保障 · 多租户 · 监控告警 · 模型仓库</td>
+<td>NVIDIA Dynamo · KServe v0.17 · Triton Inference Server · Envoy AI Gateway · Open WebUI</td>
+<td>AMD Inference Microservices (AIM) · Dynamo ROCm port · Ollama · Open WebUI · AnythingLLM</td>
+<td>国产编排平台 · 定制 API 网关 · 模型仓库适配</td>
 </tr>
 <tr>
-<td class="cl">L5</td><td><strong>推理引擎层</strong></td>
-<td>请求调度 · 批处理策略 · 并行策略编排 (TP/PP/DP/EP) · KV Cache 管理 · 显存管理 · 前缀缓存 · 模型加载 · Tokenizer · 量化部署</td>
-<td>vLLM · SGLang · TensorRT-LLM · llama.cpp · LMDeploy</td>
-<td>vLLM ROCm (First-Class) · SGLang ROCm · llama.cpp ROCm</td>
-<td>框架级定制移植 (vLLM/PyTorch 适配)</td>
+<td class="cl">L6</td><td><strong>AI 框架与推理引擎层</strong></td>
+<td>请求调度 · 批处理策略 · 并行策略编排 (TP/PP/DP/EP) · KV Cache 管理 · 显存管理 · 前缀缓存 · 模型加载 · Tokenizer · 量化部署 · 图编译推理</td>
+<td>PyTorch 2.x · vLLM · SGLang · TensorRT-LLM · llama.cpp · LMDeploy · ONNX Runtime · TensorRT</td>
+<td>PyTorch ROCm 2.x · vLLM ROCm (First-Class) · SGLang ROCm · llama.cpp ROCm · <strong>MIGraphX</strong> (图编译引擎, FP8/FP4) · ONNX Runtime ROCm</td>
+<td>框架级定制移植 (vLLM/PyTorch 适配) · 厂商推理引擎 · ONNX Runtime 跨架构适配</td>
 </tr>
 <tr>
-<td class="cl">L4</td><td><strong>算子与计算库层</strong></td>
-<td>Attention Kernel · GEMM Kernel · 通信算子 · Sampling · 量化反量化 · Activation · LayerNorm/RMSNorm · MoE Routing · 算子融合</td>
-<td>FlashInfer · FlashAttention 3/4 · CUTLASS 4.3 · cuBLASLt · NCCL · cuDNN</td>
-<td>FlashInfer ROCm · FA2/3 ROCm · Composable Kernel · hipBLASLt · RCCL · MIOpen · <strong>WMMA v2</strong></td>
-<td>平台 BLAS · 定制 Attention · 通信库适配</td>
+<td class="cl">L5</td><td><strong>编程语言运行时层</strong></td>
+<td>异构编程接口 (HIP/CUDA) · 编译器驱动 (hipcc/nvcc) · Graph 执行 · Stream/Event 管理 · 框架后端 Runtime</td>
+<td>CUDA 12.x Runtime · CUDA Graphs · nvcc · PTX JIT · PyTorch CUDA Backend</td>
+<td><strong>HIP 7.0 Runtime</strong> · hipcc (Clang-based) · HIP Graphs · OpenCL · <strong>Python (via PyTorch ROCm / CuPy)</strong> · torch.compile (ROCm backend)</td>
+<td>国产加速卡 SDK · HIP 兼容层 · 框架后端适配 · OpenCL 路径</td>
 </tr>
 <tr>
-<td class="cl">L3</td><td><strong>编程模型与运行时层</strong></td>
-<td>GPU Runtime API · Stream/Event 管理 · CUDA Graph · MPS/MIG 分区 · 内存池 · 统一内存 · 框架运行时</td>
-<td>CUDA 12.x Runtime · CUDA Graphs · MIG · MPS · PyTorch CUDA Backend</td>
-<td>HIP 7.0 Runtime · ROCm HIP Graphs · PyTorch ROCm Backend · torch.compile (ROCm)</td>
-<td>国产加速卡 SDK · HIP 兼容层 · 框架后端适配</td>
+<td class="cl">L4</td><td><strong>数学与计算库层</strong></td>
+<td>BLAS 线性代数 · DL 算子 (卷积/归一化/激活/Attention) · 通信集合库 · FFT/RAND/SOLVER · Kernel 模板库 · 张量操作原语 · WMMA/MMA 矩阵指令封装</td>
+<td>cuBLAS · cuBLASLt · cuDNN · CUTLASS 4.3 + CuTe DSL · NCCL · cuFFT · cuRAND · cuSOLVER · FlashInfer · FlashAttention 3/4</td>
+<td>rocBLAS · <strong>hipBLASLt</strong> · MIOpen · <strong>Composable Kernel (CK)</strong> · <strong>rocWMMA</strong> (矩阵乘累加封装) · RCCL · rocFFT · rocRAND · rocSOLVER · hipCUB · rocPRIM · rocThrust · hipTensor · FlashInfer ROCm</td>
+<td>平台 BLAS 库 · 厂商 DL 算子库 (CANN/天数十进制) · 定制 Attention Kernel · MPI/RDMA 通信库适配</td>
 </tr>
 <tr>
-<td class="cl">L2</td><td><strong>微架构与编译器层</strong></td>
-<td>ISA 指令集 · Tensor Core / Matrix Core 调度 · Warp / Wavefront 调度 · 寄存器分配 · Shared Memory / LDS · L1/L2 Cache · TMA · NVLink / XGMI 拓扑</td>
-<td>PTX (虚拟 ISA) · SASS (机器 ISA) · nvcc · ptxas · Tensor Core MMA 指令 · TMA 硬件单元</td>
-<td>AMD GPU ISA · hipcc (Clang-based) · <strong>WMMA v1/v2 指令</strong> · SPIR-V · RDNA ISA · LLVM 后端</td>
-<td>申威 SW64 ISA · 国产加速卡指令集 · 交叉编译工具链</td>
+<td class="cl">L3</td><td><strong>编译与工具链层</strong></td>
+<td>LLVM GPU 后端 (ISA 代码生成) · 设备端数学库 (bitcode) · SPIR-V 翻译器 · Kernel 编译器 · PTX/SASS/ISA 汇编器</td>
+<td>nvcc (CUDA C++→PTX) · ptxas (PTX→SASS) · PTX JIT Compiler · cuobjdump</td>
+<td><strong>LLVM amdgcn Backend</strong> (gfx1030/gfx1100/gfx1201) · Device Libraries (<strong>ocml.bc / ockl.bc</strong>) · <strong>SPIR-V LLVM Translator</strong> · hipcc (HIP C++→AMD GPU ISA) · AMD GPU ISA dump</td>
+<td>申威 SW64 GCC 后端 · 国产加速卡 LLVM 分支 · 交叉编译工具链</td>
+</tr>
+<tr>
+<td class="cl">L2</td><td><strong>固件与驱动层</strong></td>
+<td>GPU 内核驱动 (计算+显示) · HSA 异构系统架构 Runtime · IOMMU 内存映射 · PCIe ACS/ATS/PRI · SR-IOV 虚拟化 · Resizable BAR · GPU 固件微码</td>
+<td>NVIDIA Linux Kernel Module (nvidia.ko + nvidia-uvm.ko) · NVIDIA Container Toolkit · nvidia-persistenced</td>
+<td><strong>amdgpu</strong> (显示+计算内核驱动) + <strong>amdkfd</strong> (计算专用内核驱动) · <strong>HSA Runtime</strong> (异构系统架构用户态运行库) · IOMMU · PCIe ACS/ATS/PRI · SR-IOV · Resizable BAR · ROCm Container Toolkit</td>
+<td>国产加速卡内核驱动 · 国产 HSA/SMM 运行时 · IOMMU/SR-IOV 适配</td>
 </tr>
 <tr>
 <td class="cl">L1</td><td><strong>硬件层</strong></td>
-<td>GPU Die · HBM 显存 · Tensor Core / Matrix Core · NVSwitch · Infinity Fabric · PCIe 总线 · 网络互连</td>
-<td>H100/H200/B200 (Hopper/Blackwell) · RTX 6000 Ada · RTX PRO 5000</td>
-<td><strong>W6800/W7800/W7900/W7900D (RDNA2/3) · R9700/R9700S/R9600D (RDNA4)</strong> · MI300X/MI355X (CDNA3/4)</td>
-<td>昇腾 910B · 天数智芯 · 申威 SW</td>
+<td>GPU Die (CU/SM · Matrix Core/Tensor Core · RT Core) · HBM/GDDR 显存 · NVSwitch/Infinity Fabric 互连 · PCIe 5.0 x16 总线 (≥64 GB/s) · 网络互连 (InfiniBand/RoCE)</td>
+<td>H100/H200/B200 (Hopper/Blackwell) · RTX 6000 Ada · RTX PRO 5000 · NVSwitch · NVLink 4.0/5.0</td>
+<td><strong>W6800/W7800/W7900/W7900D (RDNA2/3) · R9700/R9700S/R9600D (RDNA4)</strong> · MI300X/MI355X (CDNA3/4) · Infinity Fabric · XGMI</td>
+<td>昇腾 910B (Da Vinci) · 天数智芯 · 申威 SW · 昆仑芯 · 壁仭 · 国产 PCIe 加速卡 · 国产 HBM 方案</td>
 </tr>
 </table>
+
+<div class="hb b" style="margin-top:16px;">
+<strong>七层模型的层间依赖关系：</strong><br>
+L1→L2: GPU 硬件通过 PCIe BAR 映射 + IOMMU 与内核驱动交互, HSA Runtime 封装 KFD ioctl <br>
+L2→L3: LLVM amdgcn Backend 通过 HSA Runtime API 下发 kernel · Device Libraries (bitcode) 提供数学内建函数 <br>
+L3→L4: 计算库 (rocBLAS/MIOpen) 调用 LLVM 编译生成的 ISA kernel, 通过 hipcc 构建 · 核心后端依赖: MIGraphX→MIOpen/rocBLAS、CK→MIOpen (可选加速) <br>
+L4→L5: HIP Runtime 加载计算库并管理 kernel launch / stream / event, Python 通过 PyTorch ROCm backend 或 CuPy 间接调用 <br>
+L5→L6: 推理引擎 (vLLM/SGLang) 通过 PyTorch ROCm backend 调用算子, 或直接调用 CK/hipBLASLt 做 GEMM kernel 选择 <br>
+L6→L7: 应用层通过 OpenAI-compatible REST API 或 gRPC 与推理引擎交互, KV-Aware Router 基于引擎上报的缓存状态做路由决策
+</div>
 </div>
 
 <div class="card bl">
@@ -459,8 +535,8 @@ tr:hover{background:#fafbfc}
 <div class="card bl">
 <h3>8.2 核心结论</h3>
 <div class="hb b">
-<p><strong>推理技术栈 = 纵向贯通六层 × 横向覆盖三平台。</strong></p>
-<p style="margin-top:8px">纵向贯通（硬件→微架构→运行时→算子→引擎→服务）决定工程师能"挖多深"。横向覆盖（NVIDIA CUDA + AMD ROCm + 国产加速卡）决定工程师能"走多宽"。</p>
+<p><strong>推理技术栈 = 纵向贯通七层 × 横向覆盖三平台。</strong></p>
+<p style="margin-top:8px">纵向贯通（硬件→固件驱动→编译器工具链→数学计算库→编程运行时→推理引擎→应用编排）决定工程师能"挖多深"。横向覆盖（NVIDIA CUDA + AMD ROCm + 国产加速卡）决定工程师能"走多宽"。</p>
 <p style="margin-top:8px">2026 年 AI 芯片格局：NVIDIA 凭借 CUDA 生态的"最后 10%"优势（FA4、TensorRT-LLM、Nsight Profiler）保持高价值场景统治力；AMD ROCm 7.2 + Radeon PRO (特别是 W7900 48GB + R9700 FP8) 在 PyTorch + vLLM 推理的主流场景中已成为生产可用的替代方案；国产平台在国家战略驱动下，在框架移植适配和自主工具链建设方面持续突破。</p>
 <p style="margin-top:8px">AMD Radeon PRO 工作站 GPU 在 2026 年的<strong>核心价值主张</strong>：W7900 (48GB) 是单卡 70B 量化模型的最优 AMD 选择；R9700 ($1,299 · FP8 原生) 是 FP8 推理性价比标杆；R9700S/R9600D 的被动散热设计开启服务器化部署新范式。</p>
 <p style="margin-top:8px">最稀缺的人才画像：<strong>同时具备 NVIDIA CUDA 深度调优 + AMD ROCm/CUDA→HIP 迁移 + 国产平台从零到一工具链建设能力的工程师</strong>。</p>
@@ -493,5 +569,19 @@ tr:hover{background:#fafbfc}
 </div>
 
 </div>
+<script>
+(function(){
+  var isSmall = window.innerWidth < 1024;
+  var tables = document.querySelectorAll('.card table,.card-grid table');
+  tables.forEach(function(tbl){
+    if(tbl.parentNode.classList.contains('table-wrap')) return;
+    if(!isSmall && tbl.querySelectorAll('th').length <= 6) return;
+    var wrap = document.createElement('div');
+    wrap.className = 'table-wrap';
+    tbl.parentNode.insertBefore(wrap, tbl);
+    wrap.appendChild(tbl);
+  });
+})();
+</script>
 </body>
 </html>
